@@ -1,0 +1,50 @@
+{
+  "name": "billiards-score",
+  "version": "1.0.0",
+  "description": "桌球计分App - 中式八球、九球追分",
+  "template": "react-ts",
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "dev:h5": "taro build --type h5 --watch",
+    "build:weapp": "taro build --type weapp",
+    "build:h5": "taro build --type h5"
+  },
+  "keywords": [
+    "taro",
+    "桌球",
+    "计分",
+    "九球",
+    "八球"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@tarojs/components": "^4.2.0",
+    "@tarojs/plugin-framework-react": "^4.2.0",
+    "@tarojs/plugin-platform-h5": "^4.2.0",
+    "@tarojs/plugin-platform-weapp": "^4.2.0",
+    "@tarojs/react": "^4.2.0",
+    "@tarojs/runtime": "^4.2.0",
+    "@tarojs/taro": "^4.2.0",
+    "@tarojs/webpack5-runner": "^4.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/preset-react": "^7.28.5",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.2",
+    "@tarojs/cli": "^4.2.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "babel-preset-taro": "^4.2.0",
+    "css-loader": "^6.0.0",
+    "sass": "^1.70.0",
+    "sass-loader": "^13.0.0",
+    "style-loader": "^3.0.0",
+    "typescript": "^5.0.0",
+    "webpack": "^5.0.0"
+  }
+}

@@ -1,0 +1,215 @@
+.nine-ball-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark);
+}
+
+.header {
+  background: var(--primary);
+  padding: 16px;
+  text-align: center;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 玩家卡片区域 */
+.players-section {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+  gap: 8px;
+}
+
+.player-card {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px 8px;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.97);
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
+  }
+}
+
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  font-size: 24px;
+}
+
+.name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.position {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.score {
+  display: block;
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 目标横幅 */
+.goal-banner {
+  background: var(--primary);
+  padding: 12px;
+  text-align: center;
+  margin: 0 16px;
+  border-radius: 8px;
+}
+
+.goal-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.goal-value {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.leader-text {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.leader-name {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* 当前玩家提示 */
+.current-player {
+  padding: 30px 16px;
+  text-align: center;
+}
+
+.player-name {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.hint {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* 操作按钮区域 */
+.actions-section {
+  flex: 1;
+  padding: 16px;
+  background: var(--primary);
+  margin-top: auto;
+}
+
+.actions-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  .icon {
+    font-size: 20px;
+  }
+}
+
+.btn-foul {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.btn-win {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.btn-small-jack {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.btn-big-jack {
+  background: var(--accent);
+  color: var(--primary-dark);
+}
+
+.btn-pass {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+.btn-exit {
+  background: rgba(160, 168, 164, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid var(--text-secondary);
+}

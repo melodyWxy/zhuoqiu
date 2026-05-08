@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>桌球计分 - 九球追分</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #1a2f23;
+      --primary-light: #2d4a3a;
+      --primary-dark: #0f1f17;
+      --accent: #d4af37;
+      --accent-light: #e8c967;
+      --bg-dark: #0a0f0d;
+      --bg-card: #1a2520;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a8a4;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #ef4444;
+      --info: #60a5fa;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+
+    /* 首页 */
+    .home-page {
+      padding: 20px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .home-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 40px 0 10px;
+    }
+
+    .home-subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 40px;
+    }
+
+    .game-type-btn {
+      display: block;
+      width: 100%;
+      padding: 30px 20px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      border: 2px solid var(--accent);
+      border-radius: 16px;
+      color: var(--text-primary);
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+
+    .game-type-btn:active {
+      transform: scale(0.98);
+    }
+
+    .game-type-btn .icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .game-type-btn .title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .game-type-btn .desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* 计分页 */
+    .score-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-dark);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--primary);
+    }
+
+    .header-back {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 16px;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .header-action {
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    /* 玩家卡片 */
+    .players-section {
+      padding: 16px;
+      display: flex;
+      justify-content: space-around;
+      gap: 12px;
+    }
+
+    .player-card {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 16px 12px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .player-card.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, var(--primary-light), var(--bg-card));
+    }
+
+    .player-card .avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      font-size: 24px;
+    }
+
+    .player-card .name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .player-card .position {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .player-card .score {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .player-card .stats {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .player-card .stats span {
+      margin: 0 2px;
+    }
+
+    .stats-icon {
+      color: var(--accent);
+    }
+
+    /* 目标横幅 */
+    .goal-banner {
+      background: var(--primary);
+      padding: 12px;
+      text-align: center;
+      margin: 0 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .goal-banner .goal-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .goal-banner .goal-value {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .goal-banner .leader-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .goal-banner .leader-name {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* 球台区域 */
+    .table-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .current-player {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .current-player .name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .current-player .hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .balls-display {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 300px;
+      margin-bottom: 20px;
+    }
+
+    .ball {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    .ball.pocketed {
+      background: #333;
+      color: #666;
+      text-decoration: line-through;
+    }
+
+    .ball.available {
+      background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* 操作按钮 */
+    .actions-section {
+      padding: 16px;
+      background: var(--primary);
+    }
+
+    .actions-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      padding: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .action-btn {
+      padding: 14px 8px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+
+    .action-btn .icon {
+      font-size: 20px;
+    }
+
+    .btn-foul {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--error);
+      border: 1px solid var(--error);
+    }
+
+    .btn-win {
+      background: rgba(74, 222, 128, 0.2);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .btn-small-jack {
+      background: rgba(212, 175, 55, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .btn-big-jack {
+      background: var(--accent);
+      color: var(--primary-dark);
+    }
+
+    .btn-pass {
+      background: rgba(96, 165, 250, 0.2);
+      color: var(--info);
+      border: 1px solid var(--info);
+    }
+
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .modal-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .modal-players {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .modal-player {
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      background: var(--primary);
+      border-radius: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .modal-player:active {
+      transform: scale(0.98);
+    }
+
+    .modal-player.selected {
+      border-color: var(--accent);
+      background: var(--primary-light);
+    }
+
+    .modal-player .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-right: 12px;
+    }
+
+    .modal-player .info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .modal-player .name {
+      font-weight: 600;
+    }
+
+    .modal-player .relation {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .modal-player .check {
+      color: var(--accent);
+      font-size: 20px;
+    }
+
+    .modal-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-btn:active {
+      transform: scale(0.98);
+    }
+
+    .modal-btn.primary {
+      background: var(--accent);
+      color: var(--primary-dark);
+    }
+
+    .modal-btn.secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      margin-top: 10px;
+    }
+
+    /* 胜利弹窗 */
+    .win-modal .win-icon {
+      font-size: 60px;
+      margin-bottom: 16px;
+    }
+
+    .win-modal .win-type {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .win-modal .win-points {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    /* 历史记录页 */
+    .history-page {
+      padding: 16px;
+    }
+
+    .history-date {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 16px 0 10px;
+      padding-left: 8px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .history-item {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+
+    .history-item .icon {
+      font-size: 28px;
+      margin-right: 12px;
+    }
+
+    .history-item .info {
+      flex: 1;
+    }
+
+    .history-item .type {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .history-item .players {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .history-item .score {
+      text-align: right;
+    }
+
+    .history-item .score-main {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .history-item .score-winner {
+      color: var(--success);
+    }
+
+    .history-item .score-loser {
+      color: var(--text-secondary);
+    }
+
+    /* 底部导航 */
+    .bottom-nav {
+      display: flex;
+      background: var(--primary);
+      padding: 10px 0;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+    }
+
+    .bottom-nav .nav-item {
+      flex: 1;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-decoration: none;
+      padding: 6px;
+    }
+
+    .bottom-nav .nav-item.active {
+      color: var(--accent);
+    }
+
+    .bottom-nav .nav-icon {
+      font-size: 22px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* 空格 */
+    .bottom-space {
+      height: 60px;
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ⚠️ 此 HTML 原型为 v1.3 之前的早期手稿，与当前实装（v1.7）已脱节：
+   · 当前 tab 栏只有"首页 / 我"两个；历史记录并入"我"
+   · 玩家卡片可点（选胜利类型）+ 长按改名；无独立"换手"按钮
+   · 顶部 GameToolbar：标题 + 计时 + 暂停/继续 + 结束
+   · 九球：得分规则可在 config 页配置；无目标分
+   · 中八：抢几局支持 3/5/7/9 + 自定义局数
+
+  最新设计请以 billiards-app-design-v1.md 与 billiards-score/ 实装为准。
+-->
+
+<div style="position:fixed; top:0; left:0; right:0; padding:8px 14px; background:#7f1d1d; color:#fff; font-size:12px; z-index:9999; text-align:center;">
+  ⚠️ 此原型与最新实装脱节，最新设计见 billiards-app-design-v1.md
+</div>
+
+
+<!-- 首页 -->
+<div class="page home-page active" id="page-home">
+  <h1 class="home-title">🏠 桌球计分</h1>
+  <p class="home-subtitle">简单到拿起手机就会用</p>
+
+  <a href="#" class="game-type-btn" onclick="showPage('page-eightball')">
+    <div class="icon">🎱</div>
+    <div class="title">中式八球</div>
+    <div class="desc">抢几局，记胜负</div>
+  </a>
+
+  <a href="#" class="game-type-btn" onclick="showPage('page-nineball')">
+    <div class="icon">🎱</div>
+    <div class="title">九球追分</div>
+    <div class="desc">比谁得分多 · 大金·小金·普胜</div>
+  </a>
+
+  <a href="#" class="game-type-btn" onclick="showPage('page-history')">
+    <div class="icon">📊</div>
+    <div class="title">历史记录</div>
+    <div class="desc">查看往期战绩</div>
+  </a>
+</div>
+
+<!-- 九球追分页 -->
+<div class="page score-page" id="page-nineball">
+  <div class="header">
+    <a href="#" class="header-back" onclick="showPage('page-home')">← 返回</a>
+    <span class="header-title">九球追分</span>
+    <span class="header-action">⏸️</span>
+  </div>
+
+  <div class="players-section">
+    <div class="player-card" id="player-1">
+      <div class="avatar">🧍</div>
+      <div class="name">张三</div>
+      <div class="position">1号位</div>
+      <div class="score" id="score-1">32</div>
+      <div class="stats">
+        <span class="stats-icon">💎</span>×1
+        <span class="stats-icon">🏅</span>×0
+        <span class="stats-icon">✅</span>×5
+      </div>
+    </div>
+
+    <div class="player-card active" id="player-2">
+      <div class="avatar">🧍</div>
+      <div class="name">李四</div>
+      <div class="position">2号位</div>
+      <div class="score" id="score-2">28</div>
+      <div class="stats">
+        <span class="stats-icon">💎</span>×0
+        <span class="stats-icon">🏅</span>×1
+        <span class="stats-icon">✅</span>×2
+      </div>
+    </div>
+
+    <div class="player-card" id="player-3">
+      <div class="avatar">🧍</div>
+      <div class="name">王五</div>
+      <div class="position">3号位</div>
+      <div class="score" id="score-3">15</div>
+      <div class="stats">
+        <span class="stats-icon">💎</span>×0
+        <span class="stats-icon">🏅</span>×0
+        <span class="stats-icon">✅</span>×1
+      </div>
+    </div>
+  </div>
+
+  <div class="goal-banner">
+    <div class="goal-text">目标：<span class="goal-value">51</span>分</div>
+    <div class="leader-text">
+      <span class="leader-name">张三</span> 领先 4 分
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="current-player">
+      <div class="name">🔵 李四，请击球</div>
+      <div class="hint">轮到李四打，打完换下家</div>
+    </div>
+
+    <div class="balls-display" id="balls-display">
+      <!-- 球会通过JS动态生成 -->
+    </div>
+  </div>
+
+  <div class="actions-section">
+    <div class="actions-hint">
+      进球不需点击，打完换下家即可<br>
+      只在犯规或9号球进袋时点击记录
+    </div>
+
+    <div class="actions-grid">
+      <button class="action-btn btn-foul" onclick="showFoulModal()">
+        <span class="icon">⚠️</span>
+        犯规
+      </button>
+      <button class="action-btn btn-win" onclick="showWinTypeModal('normal')">
+        <span class="icon">🏆</span>
+        普胜
+      </button>
+      <button class="action-btn btn-small-jack" onclick="showWinTypeModal('small')">
+        <span class="icon">🏅</span>
+        小金
+      </button>
+    </div>
+
+    <div class="actions-grid">
+      <button class="action-btn btn-big-jack" onclick="showWinTypeModal('big')">
+        <span class="icon">💎</span>
+        大金
+      </button>
+      <button class="action-btn btn-pass" onclick="passTurn()">
+        <span class="icon">🔄</span>
+        换手
+      </button>
+      <button class="action-btn btn-pass" onclick="showSnookModal()">
+        <span class="icon">⏭️</span>
+        跳过
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 中式八球页 -->
+<div class="page score-page" id="page-eightball">
+  <div class="header">
+    <a href="#" class="header-back" onclick="showPage('page-home')">← 返回</a>
+    <span class="header-title">中式八球</span>
+    <span class="header-action">⏸️</span>
+  </div>
+
+  <div class="players-section">
+    <div class="player-card" id="eb-player-1">
+      <div class="avatar">🧍</div>
+      <div class="name">张三</div>
+      <div class="score" id="eb-score-1">3</div>
+      <div class="stats">胜</div>
+    </div>
+
+    <div class="player-card" id="eb-player-2">
+      <div class="avatar">🧍</div>
+      <div class="name">李四</div>
+      <div class="score" id="eb-score-2">2</div>
+      <div class="stats">胜</div>
+    </div>
+  </div>
+
+  <div class="goal-banner">
+    <div class="goal-text">抢 <span class="goal-value">5</span> 局</div>
+    <div class="leader-text">
+      <span class="leader-name">张三</span> 领先 1 局
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="current-player">
+      <div class="name">🔵 张三，请击球</div>
+      <div class="hint">打完己方球型后击打8号球获胜</div>
+    </div>
+  </div>
+
+  <div class="actions-section">
+    <div class="actions-hint">
+      进球不需点击，打完换下家即可
+    </div>
+
+    <div class="actions-grid">
+      <button class="action-btn btn-foul" onclick="ebFoul()">
+        <span class="icon">⚠️</span>
+        犯规
+      </button>
+      <button class="action-btn btn-win" onclick="ebWin()">
+        <span class="icon">🏆</span>
+        8号进
+      </button>
+      <button class="action-btn btn-pass" onclick="ebPass()">
+        <span class="icon">🔄</span>
+        换手
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 历史记录页 -->
+<div class="page history-page" id="page-history">
+  <div class="header">
+    <span class="header-back" onclick="showPage('page-home')">←</span>
+    <span class="header-title">历史记录</span>
+    <span class="header-action"></span>
+  </div>
+
+  <div class="history-date">今天</div>
+
+  <div class="history-item">
+    <div class="icon">🎱</div>
+    <div class="info">
+      <div class="type">中式八球</div>
+      <div class="players">张三 vs 李四</div>
+    </div>
+    <div class="score">
+      <div class="score-main">
+        <span class="score-winner">5</span>:<span class="score-loser">3</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-secondary);">14:32</div>
+    </div>
+  </div>
+
+  <div class="history-item">
+    <div class="icon">🎱</div>
+    <div class="info">
+      <div class="type">九球追分</div>
+      <div class="players">张三 vs 李四 vs 王五</div>
+    </div>
+    <div class="score">
+      <div class="score-main">
+        <span class="score-winner">51</span>:<span class="score-loser">45</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-secondary);">💎×2 🏅×1 ✅×5</div>
+    </div>
+  </div>
+
+  <div class="history-date">昨天</div>
+
+  <div class="history-item">
+    <div class="icon">🎱</div>
+    <div class="info">
+      <div class="type">九球追分</div>
+      <div class="players">张三 vs 李四</div>
+    </div>
+    <div class="score">
+      <div class="score-main">
+        <span class="score-winner">28</span>:<span class="score-loser">51</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-secondary);">💎×0 🏅×3 ✅×2</div>
+    </div>
+  </div>
+
+  <div class="bottom-space"></div>
+</div>
+
+<!-- 选择胜利类型弹窗 -->
+<div class="modal-overlay hidden" id="win-type-modal">
+  <div class="modal">
+    <div class="modal-title">选择胜利类型</div>
+    <div class="modal-subtitle">谁赢了本局？</div>
+
+    <div class="modal-players">
+      <div class="modal-player" onclick="selectWinPlayer(1)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">张三</div>
+          <div class="relation">1号位 · 2号位的下家</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+      <div class="modal-player" onclick="selectWinPlayer(2)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">李四</div>
+          <div class="relation">2号位 · 当前击球者</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+      <div class="modal-player" onclick="selectWinPlayer(3)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">王五</div>
+          <div class="relation">3号位 · 2号位的下家</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+    </div>
+
+    <button class="modal-btn primary" onclick="nextToSelectTarget()">下一步：掏谁的分</button>
+    <button class="modal-btn secondary" onclick="closeModal('win-type-modal')">取消</button>
+  </div>
+</div>
+
+<!-- 选择掏谁的分弹窗 -->
+<div class="modal-overlay hidden" id="win-target-modal">
+  <div class="modal">
+    <div class="modal-title">掏谁的分？</div>
+    <div class="modal-subtitle" id="target-subtitle">李四赢了普胜，掏谁的分？</div>
+
+    <div class="modal-players" id="target-players">
+      <!-- 动态生成 -->
+    </div>
+
+    <button class="modal-btn primary" onclick="confirmWin()">确认得分</button>
+    <button class="modal-btn secondary" onclick="backToWinType()">← 上一步</button>
+  </div>
+</div>
+
+<!-- 犯规弹窗 -->
+<div class="modal-overlay hidden" id="foul-modal">
+  <div class="modal">
+    <div class="modal-title">谁犯规了？</div>
+    <div class="modal-subtitle">犯规后，下家获得自由球</div>
+
+    <div class="modal-players">
+      <div class="modal-player" onclick="selectFoulPlayer(1)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">张三</div>
+          <div class="relation">1号位</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+      <div class="modal-player" onclick="selectFoulPlayer(2)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">李四</div>
+          <div class="relation">2号位 · 当前击球者</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+      <div class="modal-player" onclick="selectFoulPlayer(3)">
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">王五</div>
+          <div class="relation">3号位</div>
+        </div>
+        <div class="check">✓</div>
+      </div>
+    </div>
+
+    <button class="modal-btn primary" onclick="nextToSelectFoulTarget()">下一步：给谁+1分</button>
+    <button class="modal-btn secondary" onclick="closeModal('foul-modal')">取消</button>
+  </div>
+</div>
+
+<!-- 犯规给谁+1分弹窗 -->
+<div class="modal-overlay hidden" id="foul-target-modal">
+  <div class="modal">
+    <div class="modal-title">给谁+1分？</div>
+    <div class="modal-subtitle" id="foul-target-subtitle">李四犯规了，+1分给谁？</div>
+
+    <div class="modal-players" id="foul-target-players">
+      <!-- 动态生成 -->
+    </div>
+
+    <button class="modal-btn primary" onclick="confirmFoul()">确认犯规</button>
+    <button class="modal-btn secondary" onclick="backToFoulPlayer()">← 上一步</button>
+  </div>
+</div>
+
+<!-- 胜利确认弹窗 -->
+<div class="modal-overlay hidden" id="win-result-modal">
+  <div class="modal win-modal">
+    <div class="win-icon" id="win-icon">🏆</div>
+    <div class="win-type" id="win-type-text">普胜！</div>
+    <div class="win-points" id="win-points-text">李四 +4分，张三 -4分</div>
+
+    <button class="modal-btn primary" onclick="confirmWinResult()">确认并开始新局</button>
+  </div>
+</div>
+
+<!-- 跳过确认弹窗 -->
+<div class="modal-overlay hidden" id="snook-modal">
+  <div class="modal">
+    <div class="modal-title">斯诺克跳过</div>
+    <div class="modal-subtitle">下家跳过本轮，不记录为犯规</div>
+
+    <button class="modal-btn primary" onclick="confirmSnook()">确认跳过</button>
+    <button class="modal-btn secondary" onclick="closeModal('snook-modal')">取消</button>
+  </div>
+</div>
+
+<script>
+  // 页面切换
+  function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+  }
+
+  // 球台初始化
+  function initBalls() {
+    const container = document.getElementById('balls-display');
+    container.innerHTML = '';
+    for (let i = 1; i <= 9; i++) {
+      const ball = document.createElement('div');
+      ball.className = 'ball available';
+      ball.id = 'ball-' + i;
+      ball.textContent = i;
+      container.appendChild(ball);
+    }
+  }
+
+  // 球进袋动画
+  function pocketBall(num) {
+    const ball = document.getElementById('ball-' + num);
+    if (ball) {
+      ball.classList.remove('available');
+      ball.classList.add('pocketed');
+    }
+  }
+
+  // 初始化
+  initBalls();
+
+  // 当前状态
+  let currentPlayer = 2;
+  let selectedWinPlayer = null;
+  let selectedWinType = null;
+  let selectedFoulPlayer = null;
+  let selectedFoulTarget = null;
+
+  // 获取座位关系
+  function getPosition(player) {
+    const positions = ['', '1号位', '2号位', '3号位'];
+    return positions[player];
+  }
+
+  function getUpper(player) {
+    // 上家：1的上家是3，2的上家是1，3的上家是2
+    if (player === 1) return 3;
+    if (player === 2) return 1;
+    if (player === 3) return 2;
+  }
+
+  function getLower(player) {
+    // 下家：1的下家是2，2的下家是3，3的下家是1
+    if (player === 1) return 2;
+    if (player === 2) return 3;
+    if (player === 3) return 1;
+  }
+
+  // 关闭弹窗
+  function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  // 显示胜利类型选择
+  function showWinTypeModal(type) {
+    selectedWinType = type;
+    selectedWinPlayer = null;
+    closeModal('win-target-modal');
+    closeModal('foul-modal');
+    closeModal('foul-target-modal');
+
+    document.querySelectorAll('#win-type-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    document.getElementById('win-type-modal').classList.remove('hidden');
+  }
+
+  // 选择胜利者
+  function selectWinPlayer(player) {
+    selectedWinPlayer = player;
+    document.querySelectorAll('#win-type-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+  }
+
+  // 下一步：选择掏谁的分
+  function nextToSelectTarget() {
+    if (!selectedWinPlayer) {
+      alert('请先选择胜利者');
+      return;
+    }
+    closeModal('win-type-modal');
+    showTargetSelect();
+  }
+
+  // 显示目标选择
+  function showTargetSelect() {
+    const container = document.getElementById('target-players');
+    const names = ['', '张三', '李四', '王五'];
+    const typeNames = { 'normal': '普胜', 'small': '小金' };
+
+    document.getElementById('target-subtitle').textContent =
+      `${names[selectedWinPlayer]}赢了${typeNames[selectedWinType]}，掏谁的分？`;
+
+    container.innerHTML = '';
+
+    // 大金/黄金9：所有人都要扣分
+    if (selectedWinType === 'big') {
+      for (let i = 1; i <= 3; i++) {
+        if (i !== selectedWinPlayer) {
+          const player = document.createElement('div');
+          player.className = 'modal-player';
+          player.onclick = (e) => confirmWinAuto();
+          player.innerHTML = `
+            <div class="avatar">🧍</div>
+            <div class="info">
+              <div class="name">${names[i]}</div>
+              <div class="relation">自动计算</div>
+            </div>
+          `;
+          container.appendChild(player);
+        }
+      }
+      document.querySelector('#win-target-modal .modal-btn.primary').textContent = '确认大金（自动计算）';
+    } else {
+      // 普胜/小金：只能掏上家
+      const upper = getUpper(selectedWinPlayer);
+      const player = document.createElement('div');
+      player.className = 'modal-player';
+      player.onclick = (e) => selectTarget(upper);
+      player.innerHTML = `
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">${names[upper]}</div>
+          <div class="relation">${names[selectedWinPlayer]}的上家</div>
+        </div>
+        <div class="check">✓</div>
+      `;
+      container.appendChild(player);
+
+      // 也允许掏下家（特殊规则）
+      const lower = getLower(selectedWinPlayer);
+      const player2 = document.createElement('div');
+      player2.className = 'modal-player';
+      player2.onclick = (e) => selectTarget(lower);
+      player2.innerHTML = `
+        <div class="avatar">🧍</div>
+        <div class="info">
+          <div class="name">${names[lower]}</div>
+          <div class="relation">${names[selectedWinPlayer]}的下家</div>
+        </div>
+        <div class="check">✓</div>
+      `;
+      container.appendChild(player2);
+
+      document.querySelector('#win-target-modal .modal-btn.primary').textContent = '确认得分';
+    }
+
+    document.getElementById('win-target-modal').classList.remove('hidden');
+  }
+
+  // 选择目标
+  function selectTarget(target) {
+    selectedFoulTarget = target;
+    document.querySelectorAll('#win-target-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+  }
+
+  // 确认胜利
+  function confirmWin() {
+    if (!selectedFoulTarget) {
+      alert('请选择掏谁的分');
+      return;
+    }
+
+    const names = ['', '张三', '李四', '王五'];
+    const typeNames = { 'normal': '普胜', 'small': '小金' };
+    const points = { 'normal': 4, 'small': 7, 'big': 10 };
+
+    // 更新分数
+    const winnerScore = document.getElementById('score-' + selectedWinPlayer);
+    const loserScore = document.getElementById('score-' + selectedFoulTarget);
+
+    winnerScore.textContent = parseInt(winnerScore.textContent) + points[selectedWinType];
+    loserScore.textContent = parseInt(loserScore.textContent) - points[selectedWinType];
+
+    // 显示结果弹窗
+    document.getElementById('win-icon').textContent = selectedWinType === 'big' ? '💎' : (selectedWinType === 'small' ? '🏅' : '🏆');
+    document.getElementById('win-type-text').textContent = (selectedWinType === 'big' ? '大金！' : (selectedWinType === 'small' ? '小金！' : '普胜！'));
+    document.getElementById('win-points-text').textContent = `${names[selectedWinPlayer]} +${points[selectedWinType]}分，${names[selectedFoulTarget]} -${points[selectedWinType]}分`;
+
+    closeModal('win-target-modal');
+    document.getElementById('win-result-modal').classList.remove('hidden');
+  }
+
+  // 大金自动确认
+  function confirmWinAuto() {
+    const names = ['', '张三', '李四', '王五'];
+    const point = 10;
+
+    // 赢家+20分，其他人各-10分
+    const winnerScore = document.getElementById('score-' + selectedWinPlayer);
+    winnerScore.textContent = parseInt(winnerScore.textContent) + 20;
+
+    for (let i = 1; i <= 3; i++) {
+      if (i !== selectedWinPlayer) {
+        const score = document.getElementById('score-' + i);
+        score.textContent = parseInt(score.textContent) - 10;
+      }
+    }
+
+    // 显示结果弹窗
+    document.getElementById('win-icon').textContent = '💎';
+    document.getElementById('win-type-text').textContent = '大金！';
+    document.getElementById('win-points-text').textContent = `${names[selectedWinPlayer]} +20分（10分×2人），其他人各-10分`;
+
+    closeModal('win-target-modal');
+    document.getElementById('win-result-modal').classList.remove('hidden');
+  }
+
+  // 确认胜利结果
+  function confirmWinResult() {
+    closeModal('win-result-modal');
+    resetRound();
+  }
+
+  // 返回选择胜利者
+  function backToWinType() {
+    closeModal('win-target-modal');
+    document.getElementById('win-type-modal').classList.remove('hidden');
+  }
+
+  // 显示犯规弹窗
+  function showFoulModal() {
+    selectedFoulPlayer = null;
+    selectedFoulTarget = null;
+    closeModal('win-type-modal');
+    closeModal('win-target-modal');
+    closeModal('foul-target-modal');
+
+    document.querySelectorAll('#foul-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    document.getElementById('foul-modal').classList.remove('hidden');
+  }
+
+  // 选择犯规者
+  function selectFoulPlayer(player) {
+    selectedFoulPlayer = player;
+    document.querySelectorAll('#foul-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+  }
+
+  // 下一步：选择给谁+1分
+  function nextToSelectFoulTarget() {
+    if (!selectedFoulPlayer) {
+      alert('请先选择犯规者');
+      return;
+    }
+    closeModal('foul-modal');
+    showFoulTargetSelect();
+  }
+
+  // 显示犯规目标选择
+  function showFoulTargetSelect() {
+    const container = document.getElementById('foul-target-players');
+    const names = ['', '张三', '李四', '王五'];
+    const lower = getLower(selectedFoulPlayer);
+
+    document.getElementById('foul-target-subtitle').textContent =
+      `${names[selectedFoulPlayer]}犯规了，+1分给谁？`;
+
+    container.innerHTML = '';
+
+    // 给下家+1分（常规）
+    const player1 = document.createElement('div');
+    player1.className = 'modal-player';
+    player1.onclick = (e) => selectFoulTargetPlayer(lower);
+    player1.innerHTML = `
+      <div class="avatar">🧍</div>
+      <div class="info">
+        <div class="name">${names[lower]}</div>
+        <div class="relation">${names[selectedFoulPlayer]}的下家（常规）</div>
+      </div>
+      <div class="check">✓</div>
+    `;
+    container.appendChild(player1);
+
+    // 给上家+1分
+    const upper = getUpper(selectedFoulPlayer);
+    const player2 = document.createElement('div');
+    player2.className = 'modal-player';
+    player2.onclick = (e) => selectFoulTargetPlayer(upper);
+    player2.innerHTML = `
+      <div class="avatar">🧍</div>
+      <div class="info">
+        <div class="name">${names[upper]}</div>
+        <div class="relation">${names[selectedFoulPlayer]}的上家</div>
+      </div>
+      <div class="check">✓</div>
+    `;
+    container.appendChild(player2);
+
+    document.getElementById('foul-target-modal').classList.remove('hidden');
+  }
+
+  // 选择犯规目标
+  function selectFoulTargetPlayer(target) {
+    selectedFoulTarget = target;
+    document.querySelectorAll('#foul-target-modal .modal-player').forEach(p => p.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+  }
+
+  // 确认犯规
+  function confirmFoul() {
+    if (!selectedFoulTarget) {
+      alert('请选择给谁+1分');
+      return;
+    }
+
+    const names = ['', '张三', '李四', '王五'];
+    const lower = getLower(selectedFoulPlayer);
+
+    // 下家获得自由球（只提示，不影响游戏逻辑）
+    // 给选中的人+1分
+    const targetScore = document.getElementById('score-' + selectedFoulTarget);
+    targetScore.textContent = parseInt(targetScore.textContent) + 1;
+
+    alert(`${names[selectedFoulTarget]} +1分\n${names[lower]}获得自由球`);
+
+    closeModal('foul-target-modal');
+    resetRound();
+  }
+
+  // 返回选择犯规者
+  function backToFoulPlayer() {
+    closeModal('foul-target-modal');
+    document.getElementById('foul-modal').classList.remove('hidden');
+  }
+
+  // 换手
+  function passTurn() {
+    currentPlayer = getLower(currentPlayer);
+    updateCurrentPlayer();
+  }
+
+  // 斯诺克跳过
+  function showSnookModal() {
+    document.getElementById('snook-modal').classList.remove('hidden');
+  }
+
+  function confirmSnook() {
+    closeModal('snook-modal');
+    alert('跳过本轮');
+    resetRound();
+  }
+
+  // 更新当前玩家
+  function updateCurrentPlayer() {
+    const names = ['', '张三', '李四', '王五'];
+    document.querySelectorAll('.player-card').forEach((card, i) => {
+      card.classList.toggle('active', i + 1 === currentPlayer);
+    });
+    document.querySelector('.current-player .name').textContent = `🔵 ${names[currentPlayer]}，请击球`;
+  }
+
+  // 重置回合
+  function resetRound() {
+    // 模拟新局开始，重置球台
+    initBalls();
+    // 换到赢的人开球
+    // 这里简化处理，保持当前玩家
+  }
+
+  // 中八相关
+  function ebFoul() {
+    alert('张三犯规，换手给李四');
+  }
+
+  function ebWin() {
+    alert('张三获胜！5:2');
+  }
+
+  function ebPass() {
+    alert('换手给李四');
+  }
+</script>
+
+</body>
+</html>

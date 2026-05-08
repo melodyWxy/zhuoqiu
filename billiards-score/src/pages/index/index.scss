@@ -1,0 +1,68 @@
+.home-page {
+  min-height: 100vh;
+  padding: 40px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(180deg, var(--primary-dark) 0%, var(--bg-dark) 100%);
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.home-title {
+  display: block;
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.home-subtitle {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.game-list {
+  width: 100%;
+  max-width: 360px;
+}
+
+.game-card {
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 30px 20px;
+  margin-bottom: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+.game-icon {
+  display: block;
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.game-title {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.game-desc {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+}

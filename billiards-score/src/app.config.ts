@@ -1,0 +1,34 @@
+export default defineAppConfig({
+  pages: [
+    'pages/index/index',
+    'pages/nine-ball/index',
+    'pages/eight-ball/index',
+    'pages/config/index',
+    'pages/me/index'
+  ],
+  window: {
+    navigationBarTitleText: '桌球计分',
+    navigationBarBackgroundColor: '#1a2f23',
+    navigationBarTextStyle: 'white',
+    backgroundColor: '#0a0f0d'
+  },
+  tabBar: {
+    color: '#a0a8a4',
+    selectedColor: '#d4af37',
+    backgroundColor: '#1a2f23',
+    list: [
+      {
+        pagePath: 'pages/index/index',
+        text: '首页',
+        iconPath: 'assets/tabs/home.svg',
+        selectedIconPath: 'assets/tabs/home-active.svg'
+      },
+      {
+        pagePath: 'pages/me/index',
+        text: '我',
+        iconPath: 'assets/tabs/me.svg',
+        selectedIconPath: 'assets/tabs/me-active.svg'
+      }
+    ]
+  }
+})
