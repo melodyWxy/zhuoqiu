@@ -1,13 +1,21 @@
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useState } from 'react'
 import { useEightBallStore } from '../../core/game/eightBallStore'
 import { useMatchStore } from '../../core/match/store'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
+import OnlineEightBall from './OnlineMode'
 import './index.scss'
 
 export default function EightBallPage() {
+  const router = useRouter()
+  const matchId = router.params.matchId as string | undefined
+  if (matchId) return <OnlineEightBall matchId={matchId} />
+  return <LocalEightBall />
+}
+
+function LocalEightBall() {
   const { players, targetWins, initGame, addWin, renamePlayer, clearGame } = useEightBallStore()
 
   useDidShow(() => {

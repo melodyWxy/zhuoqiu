@@ -193,6 +193,70 @@
   padding: 4px 4px 0;
 }
 
+.online-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+
+  &.online-on {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.04) 100%);
+  }
+}
+
+.online-toggle-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.online-toggle-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.online-toggle-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.online-toggle-knob {
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+  }
+
+  &.on {
+    background: var(--accent);
+
+    &::after {
+      transform: translateX(20px);
+    }
+  }
+}
+
 /* 开始按钮 */
 .start-section {
   margin-top: 30px;

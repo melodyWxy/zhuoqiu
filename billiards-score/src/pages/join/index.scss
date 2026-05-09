@@ -1,0 +1,140 @@
+.join-page {
+  min-height: 100vh;
+  padding: 30px 20px;
+  background: linear-gradient(180deg, var(--primary-dark) 0%, var(--bg-dark) 100%);
+  color: var(--text-primary);
+}
+
+.join-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.join-title {
+  display: block;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.join-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.join-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.code-input {
+  padding: 16px;
+  font-size: 24px;
+  text-align: center;
+  color: var(--accent);
+  letter-spacing: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  font-family: 'SF Mono', monospace;
+  text-transform: uppercase;
+}
+
+.preview-btn {
+  background: var(--accent);
+  color: var(--primary-dark);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.preview-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.preview-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.preview-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.preview-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.preview-player {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  &.empty {
+    cursor: pointer;
+
+    &:active {
+      background: rgba(212, 175, 55, 0.1);
+    }
+  }
+
+  &.selected {
+    border-color: var(--accent);
+    background: rgba(212, 175, 55, 0.15);
+  }
+}
+
+.pp-slot {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pp-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.join-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.join-btn {
+  padding: 12px;
+  font-size: 15px;
+  border-radius: 10px;
+
+  &.primary {
+    background: var(--accent);
+    color: var(--primary-dark);
+  }
+}
+
+.full-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 10px;
+}

@@ -4,7 +4,8 @@ export default defineAppConfig({
     'pages/nine-ball/index',
     'pages/eight-ball/index',
     'pages/config/index',
-    'pages/me/index'
+    'pages/me/index',
+    'pages/join/index'
   ],
   window: {
     navigationBarTitleText: '桌球计分',

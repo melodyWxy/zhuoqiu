@@ -26,6 +26,15 @@ export default function Index() {
           <Text className='game-title'>中式八球</Text>
           <Text className='game-desc'>抢几局，记胜负</Text>
         </View>
+
+        <View
+          className='game-card join-card'
+          onClick={() => Taro.navigateTo({ url: '/pages/join/index' })}
+        >
+          <Text className='game-icon'>🔗</Text>
+          <Text className='game-title'>加入联机房间</Text>
+          <Text className='game-desc'>输入 6 位房间码或扫码</Text>
+        </View>
       </View>
     </View>
   )

@@ -1,16 +1,27 @@
 import { View, Text, Button } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useState } from 'react'
 import { useNineBallStore } from '../../core/game/store'
 import { useMatchStore } from '../../core/match/store'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
+import OnlineNineBall from './OnlineMode'
 
 import './index.scss'
 
 type WinKind = 'normal' | 'small' | 'big' | 'golden9'
 
 export default function NineBallPage() {
+  const router = useRouter()
+  const matchId = router.params.matchId as string | undefined
+  if (matchId) {
+    // 联机模式：完全走 cloud 数据
+    return <OnlineNineBall matchId={matchId} />
+  }
+  return <LocalNineBall />
+}
+
+function LocalNineBall() {
   const {
     players,
     scores,

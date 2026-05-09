@@ -3,9 +3,13 @@ import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { useUserStore } from '../../core/user/store'
 import { useMatchStore, MatchRecord } from '../../core/match/store'
+import { useAuthStore } from '../../core/auth/store'
+import { authApi } from '../../core/api/auth'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
 import AvatarPickerModal from '../../components/AvatarPickerModal'
+import LoginSheet from '../../components/LoginSheet'
+import BindPhoneSheet from '../../components/BindPhoneSheet'
 import './index.scss'
 
 const AVATAR_CHOICES = ['🎱', '🧍', '🦸', '🥷', '🐯', '🦊', '🐼', '🐶', '🐱', '🦁', '🐰', '🐻']
@@ -48,9 +52,27 @@ function groupByDate(records: MatchRecord[]): { date: string; items: MatchRecord
 export default function MePage() {
   const { nickname, avatar, setNickname, setAvatar } = useUserStore()
   const { records, removeMatch } = useMatchStore()
+  const cloudUser = useAuthStore((s) => s.user)
+  const clearAuth = useAuthStore((s) => s.clear)
 
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false)
   const [avatarModalOpen, setAvatarModalOpen] = useState(false)
+  const [loginSheetOpen, setLoginSheetOpen] = useState(false)
+  const [bindPhoneSheetOpen, setBindPhoneSheetOpen] = useState(false)
+
+  const handleLogout = async () => {
+    const res = await Taro.showModal({
+      title: '退出登录',
+      content: '退出后将切回本地模式；本地记录保留。',
+      confirmText: '退出',
+      cancelText: '取消'
+    }).catch(() => null)
+    if (res && res.confirm) {
+      try { await authApi.logout() } catch {}
+      clearAuth()
+      Taro.showToast({ title: '已退出', icon: 'success' })
+    }
+  }
 
   const handleLongPressRecord = async (r: MatchRecord) => {
     const res = await Taro.showModal({
@@ -70,6 +92,40 @@ export default function MePage() {
 
   return (
     <View className='me-page'>
+      {cloudUser ? (
+        <View className='cloud-account-card'>
+          <View className='cloud-row'>
+            <Text className='cloud-emoji'>{cloudUser.avatar}</Text>
+            <View className='cloud-info'>
+              <Text className='cloud-nickname'>{cloudUser.nickname}</Text>
+              <Text className='cloud-id'>id: {cloudUser.id.slice(0, 12)}...</Text>
+              <Text className='cloud-phone'>
+                手机号 · {cloudUser.phoneNumber ?? '未绑定'}
+              </Text>
+            </View>
+            <View className='cloud-actions'>
+              {!cloudUser.phoneNumber && (
+                <View className='cloud-btn' onClick={() => setBindPhoneSheetOpen(true)}>
+                  绑定手机
+                </View>
+              )}
+              <View className='cloud-btn cloud-btn-out' onClick={handleLogout}>
+                退出
+              </View>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View className='cloud-account-card cloud-card-anon'>
+          <View className='cloud-anon-text'>
+            登录后可与朋友联机记分、战绩云端保存
+          </View>
+          <View className='cloud-btn primary' onClick={() => setLoginSheetOpen(true)}>
+            登录 / 注册
+          </View>
+        </View>
+      )}
+
       <View className='profile-card'>
         <View className='avatar' onClick={() => setAvatarModalOpen(true)}>
           <Text className='avatar-emoji'>{avatar}</Text>
@@ -156,6 +212,16 @@ export default function MePage() {
           setAvatar(v)
           setAvatarModalOpen(false)
         }}
+      />
+
+      <LoginSheet
+        visible={loginSheetOpen}
+        onClose={() => setLoginSheetOpen(false)}
+      />
+
+      <BindPhoneSheet
+        visible={bindPhoneSheetOpen}
+        onClose={() => setBindPhoneSheetOpen(false)}
       />
     </View>
   )

@@ -5,6 +5,8 @@ import { useNineBallStore } from '../../core/game/store'
 import { useEightBallStore } from '../../core/game/eightBallStore'
 import { useGameTimer } from '../../core/game/timer'
 import { useUserStore } from '../../core/user/store'
+import { useAuthStore } from '../../core/auth/store'
+import { matchApi } from '../../core/api/match'
 import { DEFAULT_NINE_BALL_RULES } from '../../core/constants'
 import './index.scss'
 
@@ -39,6 +41,9 @@ export default function ConfigPage() {
   const [targetWins, setTargetWins] = useState(5)
   const [customWins, setCustomWins] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(true)
+  const cloudUser = useAuthStore((s) => s.user)
+  const [online, setOnline] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [scoreConfig, setScoreConfig] = useState<Record<string, string>>(() =>
     Object.fromEntries(SCORE_FIELDS.map((f) => [f.key, String(f.defaultValue)]))
   )
@@ -72,8 +77,38 @@ export default function ConfigPage() {
     return override
   }
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const finalNames = effectiveNames.map((n, i) => n.trim() || `玩家${i + 1}`)
+
+    // 联机模式：服务端创建 match
+    if (online) {
+      if (!cloudUser) {
+        Taro.showToast({ title: '请先登录', icon: 'none' })
+        return
+      }
+      setCreating(true)
+      try {
+        const m = await matchApi.create({
+          type: isNineBall ? 'nine_ball' : 'eight_ball',
+          rules: isNineBall ? resolveRules() : { targetWins: resolveTargetWins() },
+          playerSlots: effectiveNames.map((n, i) => ({
+            slot: i + 1,
+            name: (n.trim() || `玩家${i + 1}`),
+            claim: i === 0
+          }))
+        })
+        useGameTimer.getState().start()
+        const url = isNineBall ? '/pages/nine-ball/index' : '/pages/eight-ball/index'
+        Taro.redirectTo({ url: `${url}?matchId=${m.id}` })
+      } catch {
+        // toast 已在 client 里弹
+      } finally {
+        setCreating(false)
+      }
+      return
+    }
+
+    // 本地模式：沿用一期
     useGameTimer.getState().start()
     if (isNineBall) {
       useNineBallStore.getState().initGame(playerCount, finalNames, resolveRules())
@@ -197,9 +232,36 @@ export default function ConfigPage() {
           </View>
         )}
 
+        <View className='config-section'>
+          <View
+            className={`online-toggle ${online ? 'online-on' : ''}`}
+            onClick={() => {
+              if (!cloudUser && !online) {
+                Taro.showToast({ title: '请先登录才能联机', icon: 'none' })
+                return
+              }
+              setOnline((v) => !v)
+            }}
+          >
+            <View className='online-toggle-info'>
+              <Text className='online-toggle-title'>
+                {online ? '🟢 联机模式' : '⚪ 本地模式'}
+              </Text>
+              <Text className='online-toggle-hint'>
+                {online
+                  ? '生成房间码后朋友扫码/输码加入，实时同步'
+                  : cloudUser
+                    ? '点击切换到联机模式'
+                    : '登录后可开启'}
+              </Text>
+            </View>
+            <View className={`online-toggle-knob ${online ? 'on' : ''}`} />
+          </View>
+        </View>
+
         <View className='start-section'>
-          <Button className='start-btn' onClick={handleStart}>
-            开始比赛
+          <Button className='start-btn' onClick={handleStart} disabled={creating}>
+            {creating ? '创建中…' : '开始比赛'}
           </Button>
         </View>
       </View>

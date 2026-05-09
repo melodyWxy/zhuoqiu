@@ -1,0 +1,74 @@
+.login-sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.login-sheet-box {
+  width: 100%;
+  max-width: 480px;
+  background: #1a2f23;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 24px 20px 32px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-sheet-title {
+  display: block;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.login-sheet-hint {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: #a0a8a4;
+  margin-bottom: 4px;
+}
+
+.login-sheet-field {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.login-sheet-btn {
+  padding: 14px;
+  text-align: center;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+
+  &:active { background: rgba(255, 255, 255, 0.12); }
+
+  &.primary {
+    background: #d4af37;
+    color: #0a0f0d;
+
+    &:active { opacity: 0.85; }
+  }
+
+  &.cancel {
+    background: transparent;
+    color: #a0a8a4;
+  }
+}

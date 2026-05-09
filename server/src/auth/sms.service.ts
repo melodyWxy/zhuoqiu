@@ -14,10 +14,26 @@ const MAX_ATTEMPTS = 5
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name)
+  private readonly devFixedCode = process.env.DEV_FIXED_SMS_CODE
+  private readonly bypassEnabled = !!this.devFixedCode
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    if (this.bypassEnabled) {
+      this.logger.warn(
+        `⚠️ 开发模式：所有验证码固定为 "${this.devFixedCode}"。生产环境请清空 DEV_FIXED_SMS_CODE。`
+      )
+    }
+  }
 
   async sendCode(phoneNumber: string, purpose: PhoneCodePurpose): Promise<void> {
+    if (this.bypassEnabled) {
+      // 开发模式：不写数据库、不限流，直接日志提示
+      this.logger.warn(
+        `[DEV SMS · BYPASS] ${phoneNumber} (${purpose}) 固定验证码: ${this.devFixedCode}`
+      )
+      return
+    }
+
     // 防刷：同一号码一分钟内不能重复发送
     const recent = await this.prisma.phoneVerifyCode.findFirst({
       where: {
@@ -42,8 +58,6 @@ export class SmsService {
         expiresAt: new Date(Date.now() + CODE_TTL_MS)
       }
     })
-
-    // MVP：打日志；生产改成调短信网关
     this.logger.warn(`[DEV SMS] ${phoneNumber} (${purpose}) 验证码: ${code}`)
   }
 
@@ -52,6 +66,16 @@ export class SmsService {
     code: string,
     purpose: PhoneCodePurpose
   ): Promise<void> {
+    if (this.bypassEnabled) {
+      if (code === this.devFixedCode) {
+        return // 开发模式直接通过
+      }
+      throw new BusinessException(
+        ErrorCode.SMS_CODE_INVALID,
+        `验证码错误（开发模式固定为 ${this.devFixedCode}）`
+      )
+    }
+
     const record = await this.prisma.phoneVerifyCode.findFirst({
       where: {
         phoneNumber,

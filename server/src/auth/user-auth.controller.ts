@@ -62,7 +62,12 @@ export class UserAuthController {
   @HttpCode(HttpStatus.OK)
   async sendSms(@Body() dto: SendSmsDto) {
     await this.smsService.sendCode(dto.phoneNumber, dto.purpose)
-    return { sentAt: new Date().toISOString(), expiresInSec: 300 }
+    const devCode = process.env.DEV_FIXED_SMS_CODE
+    return {
+      sentAt: new Date().toISOString(),
+      expiresInSec: 300,
+      devHint: devCode ? `本地开发模式：验证码固定为 ${devCode}` : null
+    }
   }
 
   @Post('phone/verify')
