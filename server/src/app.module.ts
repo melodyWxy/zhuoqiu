@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module'
 import { MeModule } from './me/me.module'
 import { MatchModule } from './match/match.module'
 import { AuditModule } from './audit/audit.module'
+import { RealtimeModule } from './realtime/realtime.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuditModule } from './audit/audit.module'
     AuditModule,
     HealthModule,
     AuthModule,
+    RealtimeModule,
     MatchModule,
     MeModule,
     AdminModule

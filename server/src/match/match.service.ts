@@ -6,6 +6,7 @@ import {
   User
 } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { RealtimeService } from '../realtime/realtime.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
 import { genId, genMatchCode } from '../common/utils/id'
 import {
@@ -39,7 +40,10 @@ export interface CreateMatchInput {
 export class MatchService {
   private readonly logger = new Logger(MatchService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService
+  ) {}
 
   // ============ 创建 ============
 
@@ -473,7 +477,7 @@ export class MatchService {
     adminId: string,
     reason: string
   ) {
-    return this.withMatchLock(matchId, async (tx) => {
+    await this.withMatchLock(matchId, async (tx) => {
       const row = await tx.matchPlayer.findFirst({
         where: { matchId, userId: targetUserId, isCurrent: true }
       })
@@ -494,6 +498,11 @@ export class MatchService {
         },
         { adminId }
       )
+      // 额外广播"你被踢出"（被踢的客户端可以据此弹窗）
+      const broadcasts = (tx as unknown as { _broadcasts?: Array<() => void> })._broadcasts
+      broadcasts?.push(() => {
+        this.realtime.broadcastKicked(matchId, targetUserId, reason)
+      })
     })
   }
 
@@ -531,12 +540,23 @@ export class MatchService {
     matchId: string,
     fn: (tx: Prisma.TransactionClient) => Promise<T>
   ): Promise<T> {
-    return this.prisma.$transaction(async (tx) => {
-      // hash to int32
+    const broadcasts: Array<() => void> = []
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 把待广播闭包挂在 tx 上，insertEvent 会 push
+      ;(tx as unknown as { _broadcasts: Array<() => void> })._broadcasts = broadcasts
       const key = this.hashMatchId(matchId)
       await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(${key})`)
       return fn(tx)
     })
+    // 事务 commit 后再广播（避免回滚导致的幽灵事件）
+    for (const b of broadcasts) {
+      try {
+        b()
+      } catch (e) {
+        this.logger.warn(`broadcast failed: ${(e as Error).message}`)
+      }
+    }
+    return result
   }
 
   private hashMatchId(id: string): number {
@@ -562,7 +582,7 @@ export class MatchService {
       select: { serverSeq: true }
     })
     const nextSeq = last ? last.serverSeq + 1n : 1n
-    await tx.matchEvent.create({
+    const created = await tx.matchEvent.create({
       data: {
         matchId,
         serverSeq: nextSeq,
@@ -573,6 +593,24 @@ export class MatchService {
         payloadJson: rest
       }
     })
+    // 把广播闭包挂到 tx 的队列，withMatchLock 事务 commit 后会统一执行
+    const broadcasts = (tx as unknown as { _broadcasts?: Array<() => void> })._broadcasts
+    if (broadcasts) {
+      broadcasts.push(() => {
+        this.realtime.broadcastMatchEvent(matchId, {
+          event: {
+            id: Number(created.id),
+            serverSeq: Number(nextSeq),
+            type,
+            payload: rest,
+            actorUserId: actor.userId ?? null,
+            actorAdminId: actor.adminId ?? null,
+            createdAt: created.createdAt.toISOString(),
+            undone: false
+          }
+        })
+      })
+    }
     return Number(nextSeq)
   }
 

@@ -163,6 +163,123 @@ export class UsersService {
     return this.prisma.user.update({ where: { id: userId }, data })
   }
 
+  /**
+   * 绑定手机号到当前 user。
+   * - 当前 user 已有 phone：已经是同号返回幂等；否则报错"已绑定其他号"
+   * - phone 已属另一 user：返回 conflictUserId，让客户端走合并流程
+   */
+  async bindPhone(userId: string, phoneNumber: string): Promise<{
+    user: User
+    conflictUserId?: string
+  }> {
+    const me = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!me) throw new Error('user not found')
+    if (me.phoneNumber) {
+      if (me.phoneNumber === phoneNumber) return { user: me }
+      throw new Error('当前账号已绑定其他手机号')
+    }
+    const other = await this.prisma.user.findUnique({ where: { phoneNumber } })
+    if (other && other.id !== userId) {
+      return { user: me, conflictUserId: other.id }
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { phoneNumber }
+    })
+    return { user: updated }
+  }
+
+  async unbindPhone(userId: string): Promise<User> {
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { wechatBindings: true, douyinBindings: true }
+    })
+    if (!me) throw new Error('user not found')
+    if (!me.phoneNumber) throw new Error('未绑定手机号')
+    const hasOtherLogin =
+      me.wechatBindings.some((b) => b.unboundAt === null) ||
+      me.douyinBindings.some((b) => b.unboundAt === null)
+    if (!hasOtherLogin) {
+      throw new Error('解绑手机号后将无登录方式，请先绑定微信或抖音')
+    }
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { phoneNumber: null }
+    })
+  }
+
+  /**
+   * 合并两个 user：把 secondary 的一切迁到 primary，secondary 标记 deleted。
+   */
+  async mergeUsers(primaryId: string, secondaryId: string): Promise<void> {
+    if (primaryId === secondaryId) throw new Error('不能合并同一账号')
+
+    await this.prisma.$transaction(async (tx) => {
+      const [primary, secondary] = await Promise.all([
+        tx.user.findUnique({ where: { id: primaryId } }),
+        tx.user.findUnique({ where: { id: secondaryId } })
+      ])
+      if (!primary || !secondary) throw new Error('账号不存在')
+      if (secondary.status === 'deleted') return
+
+      // 1. 微信/抖音 binding 转到 primary
+      await tx.wechatBinding.updateMany({
+        where: { userId: secondaryId, unboundAt: null },
+        data: { userId: primaryId }
+      })
+      await tx.douyinBinding.updateMany({
+        where: { userId: secondaryId, unboundAt: null },
+        data: { userId: primaryId }
+      })
+
+      // 2. matches 归属
+      await tx.match.updateMany({
+        where: { ownerUserId: secondaryId },
+        data: { ownerUserId: primaryId }
+      })
+      await tx.matchPlayer.updateMany({
+        where: { userId: secondaryId },
+        data: { userId: primaryId }
+      })
+
+      // 3. 手机号迁移（primary 无 / secondary 有 → 转给 primary）
+      if (!primary.phoneNumber && secondary.phoneNumber) {
+        await tx.user.update({
+          where: { id: secondaryId },
+          data: { phoneNumber: null } // 先释放唯一约束
+        })
+        await tx.user.update({
+          where: { id: primaryId },
+          data: { phoneNumber: secondary.phoneNumber }
+        })
+      }
+
+      // 4. secondary 标记 deleted
+      await tx.user.update({
+        where: { id: secondaryId },
+        data: {
+          status: 'deleted',
+          deletedAt: new Date(),
+          phoneNumber: null
+        }
+      })
+    })
+  }
+
+  async unbindWechatById(bindingId: string): Promise<void> {
+    await this.prisma.wechatBinding.update({
+      where: { id: bindingId },
+      data: { unboundAt: new Date() }
+    })
+  }
+
+  async unbindDouyinById(bindingId: string): Promise<void> {
+    await this.prisma.douyinBinding.update({
+      where: { id: bindingId },
+      data: { unboundAt: new Date() }
+    })
+  }
+
   async touchActive(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },

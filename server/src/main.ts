@@ -1,5 +1,6 @@
 import 'reflect-metadata'
-import { NestFactory, Reflector } from '@nestjs/core'
+import { NestFactory } from '@nestjs/core'
+import { WsAdapter } from '@nestjs/platform-ws'
 
 // BigInt 全局序列化：Prisma 的 BigInt 字段（serverSeq / id 等）直接 JSON.stringify 会报错
 // 对 MVP 来说数量级不会爆 Number.MAX_SAFE_INTEGER，转 number 即可
@@ -27,6 +28,7 @@ async function bootstrap() {
   const prefix = config.get('globalPrefix', { infer: true }) ?? 'v1'
 
   app.setGlobalPrefix(prefix)
+  app.useWebSocketAdapter(new WsAdapter(app))
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
