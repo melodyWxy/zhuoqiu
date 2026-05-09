@@ -6,6 +6,7 @@ import { BusinessException, ErrorCode } from '../common/exceptions/business.exce
 import { Prisma, MatchState, MatchType } from '@prisma/client'
 import { IsEnum, IsOptional, IsString } from 'class-validator'
 import { Transform } from 'class-transformer'
+import { MatchService } from '../match/match.service'
 
 class ListMatchesQuery extends PaginationDto {
   @IsOptional()
@@ -33,7 +34,10 @@ class ListMatchesQuery extends PaginationDto {
 @Controller('admin/matches')
 @UseGuards(AdminAuthGuard)
 export class MatchesAdminController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly matchService: MatchService
+  ) {}
 
   @Get()
   async list(@Query() q: ListMatchesQuery) {
@@ -84,21 +88,14 @@ export class MatchesAdminController {
 
   @Get(':id')
   async detail(@Param('id') id: string) {
-    const match = await this.prisma.match.findFirst({
-      where: { OR: [{ id }, { code: id.toUpperCase() }] },
-      include: {
-        owner: {
-          select: { id: true, nickname: true, phoneNumber: true, avatar: true }
-        },
-        players: {
-          orderBy: [{ slot: 'asc' }, { joinedAt: 'asc' }]
-        }
-      }
+    // 复用 MatchService.detail（含 timer/computed/players）
+    // 再补一个 admin-only 字段：owner.phoneNumber
+    const detail = await this.matchService.detail(id)
+    const ownerWithPhone = await this.prisma.user.findUnique({
+      where: { id: detail.ownerUserId },
+      select: { id: true, nickname: true, avatar: true, phoneNumber: true }
     })
-    if (!match) {
-      throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
-    }
-    return match
+    return { ...detail, owner: ownerWithPhone ?? detail.owner }
   }
 
   @Get(':id/events')
