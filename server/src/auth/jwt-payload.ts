@@ -24,3 +24,11 @@ export interface AdminRefreshPayload {
   exp?: number
   jti?: string
 }
+
+export interface UserRefreshPayload {
+  type: 'user_refresh'
+  sub: string
+  iat?: number
+  exp?: number
+  jti?: string
+}

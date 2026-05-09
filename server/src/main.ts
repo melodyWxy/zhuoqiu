@@ -1,5 +1,12 @@
 import 'reflect-metadata'
 import { NestFactory, Reflector } from '@nestjs/core'
+
+// BigInt 全局序列化：Prisma 的 BigInt 字段（serverSeq / id 等）直接 JSON.stringify 会报错
+// 对 MVP 来说数量级不会爆 Number.MAX_SAFE_INTEGER，转 number 即可
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(BigInt.prototype as any).toJSON = function () {
+  return Number(this)
+}
 import { ConfigService } from '@nestjs/config'
 import { Logger, ValidationPipe } from '@nestjs/common'
 import { AppModule } from './app.module'
