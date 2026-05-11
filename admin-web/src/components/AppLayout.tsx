@@ -6,7 +6,8 @@ import {
   UserOutlined,
   AuditOutlined,
   SettingOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  ShopOutlined
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
@@ -68,6 +69,11 @@ export default function AppLayout() {
             path: '/users',
             name: '用户管理',
             icon: <UserOutlined />
+          },
+          {
+            path: '/venue-applications',
+            name: '球房入驻审核',
+            icon: <ShopOutlined />
           },
           {
             path: '/audit',

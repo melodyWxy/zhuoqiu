@@ -6,7 +6,9 @@ export default defineAppConfig({
     'pages/config/index',
     'pages/me/index',
     'pages/join/index',
-    'pages/match-detail/index'
+    'pages/match-detail/index',
+    'pages/venue-login/index',
+    'pages/venue-apply/index'
   ],
   window: {
     navigationBarTitleText: '桌球计分',

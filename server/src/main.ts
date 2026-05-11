@@ -1,6 +1,9 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
 import { WsAdapter } from '@nestjs/platform-ws'
+import { NestExpressApplication } from '@nestjs/platform-express'
+import { join } from 'path'
+import { mkdirSync } from 'fs'
 
 // BigInt 全局序列化：Prisma 的 BigInt 字段（serverSeq / id 等）直接 JSON.stringify 会报错
 // 对 MVP 来说数量级不会爆 Number.MAX_SAFE_INTEGER，转 number 即可
@@ -16,13 +19,17 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { AppConfig } from './config/configuration'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     cors: {
       origin: true,
       credentials: true
     }
   })
+  // 上传文件本地静态访问（MVP）
+  const uploadRoot = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads')
+  mkdirSync(uploadRoot, { recursive: true })
+  app.useStaticAssets(uploadRoot, { prefix: '/uploads/' })
   const config = app.get(ConfigService<AppConfig>)
   const port = config.get('port', { infer: true }) ?? 3001
   const prefix = config.get('globalPrefix', { infer: true }) ?? 'v1'

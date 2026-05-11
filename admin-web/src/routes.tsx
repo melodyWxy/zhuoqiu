@@ -8,9 +8,17 @@ import UsersList from './pages/Users/List'
 import UserDetailPage from './pages/Users/Detail'
 import Audit from './pages/Audit'
 import Settings from './pages/Settings'
+import VenueApplications from './pages/Venues/Applications'
+import VenueApplicationDetail from './pages/Venues/ApplicationDetail'
+import VenueLogin from './pages/VenueMerchant/VenueLogin'
+import Apply from './pages/VenueMerchant/Apply'
+import ApplyStatus from './pages/VenueMerchant/ApplyStatus'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  { path: '/venue-login', element: <VenueLogin /> },
+  { path: '/apply', element: <Apply /> },
+  { path: '/apply/status', element: <ApplyStatus /> },
   {
     path: '/',
     element: <AppLayout />,
@@ -20,6 +28,8 @@ export const router = createBrowserRouter([
       { path: 'matches/:id', element: <MatchDetail /> },
       { path: 'users', element: <UsersList /> },
       { path: 'users/:id', element: <UserDetailPage /> },
+      { path: 'venue-applications', element: <VenueApplications /> },
+      { path: 'venue-applications/:id', element: <VenueApplicationDetail /> },
       { path: 'audit', element: <Audit /> },
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <Navigate to="/" replace /> }

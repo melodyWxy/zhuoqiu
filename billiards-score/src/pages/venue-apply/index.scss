@@ -1,0 +1,210 @@
+.venue-apply-page {
+  min-height: 100vh;
+  background: var(--bg-page, #0d1013);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.va-loading {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-secondary);
+}
+
+/* 表单 */
+.va-form {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.va-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 14px 0 4px;
+  display: block;
+}
+
+.va-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  display: block;
+}
+
+.va-field {
+  background: var(--primary);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.va-textarea {
+  min-height: 60px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 上传 / 资质 */
+.va-btn-upload {
+  margin-top: 6px;
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--accent);
+  border: 1.5px dashed var(--accent);
+  border-radius: 8px;
+  padding: 18px;
+  font-size: 15px;
+}
+
+.va-license-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  background: var(--primary);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.va-license-thumb {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 6px;
+}
+
+.va-btn-text {
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  border: none;
+}
+
+/* 提交按钮 */
+.va-btn-primary {
+  margin-top: 16px;
+  background: var(--accent);
+  color: var(--primary-dark);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+}
+
+.va-btn-secondary {
+  margin-top: 8px;
+  background: rgba(160, 168, 164, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid var(--text-secondary);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+/* 状态卡 */
+.va-status-card,
+.va-success-card,
+.va-rejected-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.va-status-icon,
+.va-success-icon,
+.va-rejected-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.va-status-title,
+.va-success-title,
+.va-rejected-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.va-status-sub,
+.va-success-sub,
+.va-rejected-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.va-rejected-reason {
+  font-size: 14px;
+  color: var(--error);
+  display: block;
+  margin: 8px 0;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+}
+
+.va-info {
+  margin: 16px 0;
+  text-align: left;
+  background: var(--primary);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.va-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.va-info-row:last-child {
+  border-bottom: none;
+}
+
+.va-info-label {
+  color: var(--text-secondary);
+}
+
+.va-info-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  flex: 1;
+  margin-left: 12px;
+  word-break: break-all;
+}
+
+.va-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+  margin: 12px 0;
+}
+
+.va-summary {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.va-summary-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 8px;
+}

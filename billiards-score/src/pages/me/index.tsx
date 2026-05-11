@@ -57,6 +57,7 @@ export default function MePage() {
   const { records, removeMatch } = useMatchStore()
   const cloudUser = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clear)
+  const venueSession = useAuthStore((s) => s.venueSession)
 
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false)
   const [avatarModalOpen, setAvatarModalOpen] = useState(false)
@@ -155,6 +156,55 @@ export default function MePage() {
           </View>
         </View>
       )}
+
+      {/* 球房管理模式入口（v2.10） */}
+      <View className='venue-mode-card'>
+        {venueSession ? (
+          <>
+            <View className='venue-mode-row'>
+              <Text className='venue-mode-icon'>🏢</Text>
+              <View className='venue-mode-info'>
+                <Text className='venue-mode-title'>
+                  当前已登录商家：{venueSession.account.nickname}
+                </Text>
+                <Text className='venue-mode-sub'>
+                  {venueSession.account.venueId
+                    ? `已绑定球房 · ${venueSession.account.venueId.slice(0, 12)}…`
+                    : '尚未绑定球房，可继续完成入驻申请'}
+                </Text>
+              </View>
+            </View>
+            <View
+              className='venue-mode-btn'
+              onClick={() =>
+                Taro.navigateTo({ url: '/pages/venue-apply/index' })
+              }
+            >
+              {venueSession.account.venueId ? '查看球房状态 →' : '查看 / 完成申请 →'}
+            </View>
+          </>
+        ) : (
+          <>
+            <View className='venue-mode-row'>
+              <Text className='venue-mode-icon'>🏢</Text>
+              <View className='venue-mode-info'>
+                <Text className='venue-mode-title'>切换到球房管理模式</Text>
+                <Text className='venue-mode-sub'>
+                  已入驻商家可登录查看自家球房 / 赛事；新商家可申请入驻
+                </Text>
+              </View>
+            </View>
+            <View
+              className='venue-mode-btn'
+              onClick={() =>
+                Taro.navigateTo({ url: '/pages/venue-login/index' })
+              }
+            >
+              切换到球房管理模式 →
+            </View>
+          </>
+        )}
+      </View>
 
       <View className='profile-card'>
         <View className='avatar' onClick={() => setAvatarModalOpen(true)}>

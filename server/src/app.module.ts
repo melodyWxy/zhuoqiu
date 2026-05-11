@@ -11,6 +11,7 @@ import { MatchModule } from './match/match.module'
 import { AuditModule } from './audit/audit.module'
 import { RealtimeModule } from './realtime/realtime.module'
 import { VenueModule } from './venue/venue.module'
+import { UploadModule } from './upload/upload.module'
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { VenueModule } from './venue/venue.module'
     MatchModule,
     MeModule,
     AdminModule,
-    VenueModule
+    VenueModule,
+    UploadModule
   ]
 })
 export class AppModule {}

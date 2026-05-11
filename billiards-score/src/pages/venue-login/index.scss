@@ -1,0 +1,156 @@
+.venue-login-page {
+  min-height: 100vh;
+  background: var(--bg-page, #0d1013);
+  padding: 30px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vl-header {
+  text-align: center;
+  padding: 16px 0 10px;
+}
+
+.vl-emoji {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.vl-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.vl-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.vl-form {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vl-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.vl-field {
+  background: var(--primary);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.vl-field-flex {
+  flex: 1;
+}
+
+.vl-code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vl-send-btn {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 36px;
+  white-space: nowrap;
+
+  &[disabled] {
+    opacity: 0.55;
+  }
+}
+
+.vl-hint {
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.vl-login-btn {
+  margin-top: 8px;
+  background: var(--accent);
+  color: var(--primary-dark);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+.vl-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 6px 0;
+}
+
+.vl-apply-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vl-apply-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.vl-apply-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.vl-apply-btn {
+  border: 1.5px dashed var(--accent);
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--accent);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.vl-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  text-align: center;
+}
+
+.vl-footer-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.vl-footer-url {
+  font-size: 12px;
+  color: var(--accent);
+  display: block;
+  margin-top: 2px;
+}
