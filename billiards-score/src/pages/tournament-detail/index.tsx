@@ -3,6 +3,8 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import {
   tournamentsPublicApi,
+  type BracketMatchItem,
+  type BracketTree,
   type MyRegistration,
   type TournamentDetailPublic,
   type TournamentRegPublic
@@ -36,6 +38,7 @@ export default function TournamentDetailPage() {
   const [t, setT] = useState<TournamentDetailPublic | null>(null)
   const [regs, setRegs] = useState<TournamentRegPublic[]>([])
   const [myReg, setMyReg] = useState<MyRegistration | null>(null)
+  const [bracket, setBracket] = useState<BracketTree | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -57,6 +60,21 @@ export default function TournamentDetailPage() {
         }
       } else {
         setMyReg(null)
+      }
+      // bracket 仅当已开赛/已结束/报名截止时拉
+      if (
+        detail.status === 'in_progress' ||
+        detail.status === 'completed' ||
+        detail.status === 'registration_closed'
+      ) {
+        try {
+          const b = await tournamentsPublicApi.bracket(id)
+          setBracket(b)
+        } catch {
+          setBracket(null)
+        }
+      } else {
+        setBracket(null)
       }
     } finally {
       setLoading(false)
@@ -222,18 +240,159 @@ export default function TournamentDetailPage() {
     </View>
   )
 
-  const renderBracket = () => (
-    <View className='td-card'>
-      <Text className='td-section'>赛程</Text>
-      <Text className='td-notice'>
-        {status === 'draft' || status === 'registering'
-          ? '报名结束后由商家"开赛"生成赛程（P4 上线）'
-          : status === 'in_progress' || status === 'completed'
-            ? '赛程展示在 P4 上线'
-            : '赛事已取消'}
-      </Text>
-    </View>
-  )
+  const myRegId = myReg?.status === 'confirmed' ? myReg.id : null
+
+  const findMyMatch = (): BracketMatchItem | null => {
+    if (!bracket || !myRegId) return null
+    // 找最新一场涉及我的、状态非 walkover/completed 的对阵
+    let candidate: BracketMatchItem | null = null
+    for (const r of bracket.rounds) {
+      for (const m of r.matches) {
+        const mine =
+          m.playerARegistrationId === myRegId ||
+          m.playerBRegistrationId === myRegId
+        if (!mine) continue
+        if (
+          m.status === 'ready' ||
+          m.status === 'in_progress' ||
+          (m.status === 'pending' &&
+            (m.playerARegistrationId === myRegId ||
+              m.playerBRegistrationId === myRegId))
+        ) {
+          candidate = m
+        } else if (m.status === 'completed' && !candidate) {
+          candidate = m
+        }
+      }
+    }
+    return candidate
+  }
+
+  const roundName = (round: number, total: number): string => {
+    if (round === total) return '决赛'
+    if (round === total - 1) return '半决赛'
+    if (round === total - 2) return '8 强'
+    return `第 ${round} 轮`
+  }
+
+  const renderBracket = () => {
+    if (status === 'draft' || status === 'registering') {
+      return (
+        <View className='td-card'>
+          <Text className='td-section'>赛程</Text>
+          <Text className='td-notice'>
+            报名结束后由商家"开赛"生成赛程
+          </Text>
+        </View>
+      )
+    }
+    if (status === 'cancelled') {
+      return (
+        <View className='td-card'>
+          <Text className='td-section'>赛程</Text>
+          <Text className='td-notice'>赛事已取消</Text>
+        </View>
+      )
+    }
+    if (!bracket) {
+      return (
+        <View className='td-card'>
+          <Text className='td-section'>赛程</Text>
+          <Text className='td-notice'>加载中…</Text>
+        </View>
+      )
+    }
+    const myMatch = findMyMatch()
+    return (
+      <View>
+        {myMatch && (
+          <View className='td-card td-my-match'>
+            <Text className='td-section'>我的对阵</Text>
+            <Text className='td-my-round'>
+              {roundName(myMatch.round, bracket.totalRounds)} ·{' '}
+              {myMatch.status === 'ready'
+                ? '待开赛'
+                : myMatch.status === 'in_progress'
+                  ? '进行中'
+                  : myMatch.status === 'completed'
+                    ? '已结束'
+                    : '待定'}
+            </Text>
+            <View className='td-my-vs'>
+              <Text
+                className={`td-my-name ${
+                  myMatch.playerARegistrationId === myRegId ? 'me' : ''
+                }`}
+              >
+                {myMatch.playerA?.displayName ?? '待定'}
+              </Text>
+              <Text className='td-my-vs-label'>vs</Text>
+              <Text
+                className={`td-my-name ${
+                  myMatch.playerBRegistrationId === myRegId ? 'me' : ''
+                }`}
+              >
+                {myMatch.playerB?.displayName ?? '待定'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <View className='td-card'>
+          <Text className='td-section'>赛程树</Text>
+          <Text className='td-bracket-legend'>
+            ✓ 完成 · ● 进行 · ◌ 待开 · ○ 轮空
+          </Text>
+          <View className='td-bracket-scroll'>
+            {bracket.rounds.map((r) => (
+              <View key={r.round} className='td-bracket-col'>
+                <Text className='td-bracket-round-title'>
+                  {roundName(r.round, bracket.totalRounds)}
+                </Text>
+                {r.matches.map((m) => {
+                  const aMine = m.playerARegistrationId === myRegId
+                  const bMine = m.playerBRegistrationId === myRegId
+                  const aWin =
+                    !!m.winnerRegistrationId &&
+                    m.winnerRegistrationId === m.playerARegistrationId
+                  const bWin =
+                    !!m.winnerRegistrationId &&
+                    m.winnerRegistrationId === m.playerBRegistrationId
+                  return (
+                    <View
+                      key={m.id}
+                      className={`td-bracket-card ${aMine || bMine ? 'mine' : ''} td-bracket-${m.status}`}
+                    >
+                      <View
+                        className={`td-bracket-row ${aMine ? 'me' : ''} ${aWin ? 'won' : ''}`}
+                      >
+                        <Text className='td-bracket-name'>
+                          {m.playerA?.seed ? `#${m.playerA.seed} ` : ''}
+                          {m.playerA?.displayName ??
+                            (m.status === 'walkover' ? 'BYE' : '待定')}
+                        </Text>
+                        {aWin && <Text className='td-bracket-check'>✓</Text>}
+                      </View>
+                      <View
+                        className={`td-bracket-row ${bMine ? 'me' : ''} ${bWin ? 'won' : ''}`}
+                      >
+                        <Text className='td-bracket-name'>
+                          {m.playerB?.seed ? `#${m.playerB.seed} ` : ''}
+                          {m.playerB?.displayName ??
+                            (m.status === 'walkover' ? 'BYE' : '待定')}
+                        </Text>
+                        {bWin && <Text className='td-bracket-check'>✓</Text>}
+                      </View>
+                    </View>
+                  )
+                })}
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View className='tournament-detail-page'>

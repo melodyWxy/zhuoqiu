@@ -15,6 +15,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
   tournamentMerchantApi,
+  type BracketMatchItem,
+  type BracketPlayerRef,
+  type BracketTree,
   type TournamentItem,
   type TournamentRegistrationItem,
   type TournamentStatus
@@ -50,6 +53,7 @@ export default function TournamentDetail() {
   const { message } = App.useApp()
   const [t, setT] = useState<TournamentItem | null>(null)
   const [regs, setRegs] = useState<TournamentRegistrationItem[]>([])
+  const [bracket, setBracket] = useState<BracketTree | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWithdrawn, setShowWithdrawn] = useState(false)
 
@@ -63,6 +67,21 @@ export default function TournamentDetail() {
       ])
       setT(r1.tournament)
       setRegs(r2.items)
+      // bracket 仅在 in_progress / completed / registration_closed 拉
+      if (
+        ['in_progress', 'completed', 'registration_closed'].includes(
+          r1.tournament.status
+        )
+      ) {
+        try {
+          const b = await tournamentMerchantApi.bracket(id)
+          setBracket(b)
+        } catch {
+          setBracket(null)
+        }
+      } else {
+        setBracket(null)
+      }
     } finally {
       setLoading(false)
     }
@@ -91,11 +110,28 @@ export default function TournamentDetail() {
     if (!t) return
     Modal.confirm({
       title: '关闭报名？',
-      content: `当前 ${t.registeredCount}/${t.maxPlayers} 人。关闭后 C 端不能再报名；下一步（P4）生成 bracket 开赛。`,
+      content: `当前 ${t.registeredCount}/${t.maxPlayers} 人。关闭后 C 端不能再报名；紧接着可"开赛"生成赛程。`,
       okText: '关闭报名',
       onOk: async () => {
         await tournamentMerchantApi.closeRegistration(t.id)
         message.success('报名已关闭')
+        fetchAll()
+      }
+    })
+  }
+
+  const startNow = () => {
+    if (!t) return
+    Modal.confirm({
+      title: '生成赛程并开赛？',
+      content: `按报名顺序分配种子，补 BYE 到 ${
+        Math.pow(2, Math.ceil(Math.log2(Math.max(2, t.registeredCount))))
+      } 位（2^n）；赛事状态变为"进行中"，不可撤销。`,
+      okText: '开赛',
+      okButtonProps: { type: 'primary' },
+      onOk: async () => {
+        await tournamentMerchantApi.start(t.id)
+        message.success('已开赛，赛程已生成')
         fetchAll()
       }
     })
@@ -173,8 +209,8 @@ export default function TournamentDetail() {
             </>
           )}
           {t.status === 'registration_closed' && (
-            <Button type="primary" disabled>
-              生成赛程并开赛（P4 上线）
+            <Button type="primary" onClick={startNow}>
+              🚀 生成赛程并开赛
             </Button>
           )}
           {canEdit && (
@@ -308,16 +344,165 @@ export default function TournamentDetail() {
             key: 'bracket',
             label: '赛程',
             children: (
-              <Card>
-                <Paragraph>
-                  赛程（bracket）生成与现场控台在 P4 / P5 上线。当前状态：
-                  {STATUS_LABEL[t.status].text}
-                </Paragraph>
-              </Card>
+              <BracketView
+                tournament={t}
+                bracket={bracket}
+                loading={loading}
+              />
             )
           }
         ]}
       />
+    </div>
+  )
+}
+
+// ============ BracketView 子组件 ============
+
+const BM_STATUS: Record<string, { text: string; color: string }> = {
+  pending: { text: '待定', color: 'default' },
+  ready: { text: '待开', color: 'blue' },
+  in_progress: { text: '进行中', color: 'processing' },
+  completed: { text: '已完成', color: 'success' },
+  walkover: { text: '轮空', color: 'warning' }
+}
+
+function ROUND_NAME(round: number, total: number): string {
+  if (round === total) return '决赛'
+  if (round === total - 1) return '半决赛'
+  if (round === total - 2) return '四分之一决赛'
+  return `第 ${round} 轮`
+}
+
+function BracketView({
+  tournament,
+  bracket,
+  loading
+}: {
+  tournament: TournamentItem
+  bracket: BracketTree | null
+  loading: boolean
+}) {
+  if (!bracket) {
+    if (
+      tournament.status === 'draft' ||
+      tournament.status === 'registering' ||
+      tournament.status === 'cancelled'
+    ) {
+      return (
+        <Card>
+          <Paragraph>
+            赛程会在"开赛"后生成。当前状态：{tournament.status}
+          </Paragraph>
+        </Card>
+      )
+    }
+    return <Card loading={loading} />
+  }
+
+  const roundMap = bracket.rounds.reduce<Record<number, BracketMatchItem[]>>(
+    (acc, r) => ({ ...acc, [r.round]: r.matches }),
+    {}
+  )
+  const total = bracket.totalRounds
+
+  return (
+    <Card
+      bodyStyle={{ padding: 16, overflowX: 'auto' }}
+      title={
+        <Space>
+          <span>赛程树</span>
+          <Tag>{bracket.rounds[0]?.matches.length ?? 0} 首轮 / {total} 轮</Tag>
+          <Tag color="default">
+            图例：● 进行 ✓ 完成 ◌ 待开 ○ 轮空
+          </Tag>
+        </Space>
+      }
+    >
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+        {Array.from({ length: total }, (_, i) => i + 1).map((round) => {
+          const items = roundMap[round] ?? []
+          return (
+            <div
+              key={round}
+              style={{
+                minWidth: 220,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12
+              }}
+            >
+              <div style={{ fontWeight: 600, color: '#d4af37' }}>
+                {ROUND_NAME(round, total)}（{items.length}）
+              </div>
+              {items.map((m) => (
+                <BracketMatchCard key={m.id} m={m} />
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+function BracketMatchCard({ m }: { m: BracketMatchItem }) {
+  const row = (
+    reg: BracketPlayerRef | null,
+    isWinner: boolean
+  ) => (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '6px 8px',
+        borderRadius: 4,
+        background: isWinner ? 'rgba(74,222,128,0.08)' : 'transparent',
+        fontWeight: isWinner ? 600 : 400,
+        color: reg ? 'inherit' : '#888'
+      }}
+    >
+      <span>
+        {reg ? (
+          <>
+            {reg.seed ? <Tag>#{reg.seed}</Tag> : null}
+            {reg.displayName}
+          </>
+        ) : m.status === 'walkover' ? (
+          'BYE'
+        ) : (
+          '待定'
+        )}
+      </span>
+      {isWinner ? <span>✓</span> : null}
+    </div>
+  )
+  return (
+    <div
+      style={{
+        border: '1px solid #333',
+        borderRadius: 6,
+        padding: 6,
+        background: '#181c22'
+      }}
+    >
+      {row(m.playerA, m.winnerRegistrationId === m.playerARegistrationId && !!m.winnerRegistrationId)}
+      <div style={{ height: 1, background: '#2a2e35', margin: '2px 0' }} />
+      {row(m.playerB, m.winnerRegistrationId === m.playerBRegistrationId && !!m.winnerRegistrationId)}
+      <div
+        style={{
+          marginTop: 4,
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: 11,
+          color: '#888'
+        }}
+      >
+        <span>slot {m.slotInRound + 1}</span>
+        <Tag color={BM_STATUS[m.status]?.color} style={{ fontSize: 10 }}>
+          {BM_STATUS[m.status]?.text ?? m.status}
+        </Tag>
+      </div>
     </div>
   )
 }

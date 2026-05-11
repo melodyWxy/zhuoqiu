@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import {
+  BracketMatchStatus,
   Prisma,
   Tournament,
   TournamentRegistration,
@@ -14,6 +15,7 @@ import {
   TournamentListQueryDto,
   UpdateTournamentDto
 } from './dto/tournament.dto'
+import { planBracket } from './bracket-utils'
 
 @Injectable()
 export class TournamentService {
@@ -133,7 +135,7 @@ export class TournamentService {
 
   /**
    * 关闭报名（registering → registration_closed）。
-   * 之后由 P4 的 startTournament 接力生成 bracket。
+   * 之后由 startTournament 接力生成 bracket。
    */
   async closeRegistration(id: string, accountId: string) {
     const t = await this.findOwn(id, accountId)
@@ -147,6 +149,235 @@ export class TournamentService {
       where: { id },
       data: { status: TournamentStatus.registration_closed }
     })
+  }
+
+  /**
+   * 生成 bracket 并开赛（registration_closed → in_progress）。
+   * - 只支持 single_elim
+   * - 按报名顺序分配 seed
+   * - 补 BYE 到 2^k
+   * - 一次性生成全部轮次（首轮填人 + 其余 round 为 pending）
+   * - 首轮一方 BYE 时自动 walkover，winner 填入下一轮对应位置
+   */
+  async startTournament(id: string, accountId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const t = await tx.tournament.findUnique({ where: { id } })
+      if (!t) {
+        throw new BusinessException(
+          ErrorCode.TOURNAMENT_NOT_FOUND,
+          '赛事不存在'
+        )
+      }
+      const acc = await tx.venueAccount.findUnique({ where: { id: accountId } })
+      if (!acc || acc.venueId !== t.venueId) {
+        throw new BusinessException(
+          ErrorCode.TOURNAMENT_NOT_OWNER,
+          '不是你自家球房的赛事'
+        )
+      }
+      if (
+        t.status !== TournamentStatus.registering &&
+        t.status !== TournamentStatus.registration_closed
+      ) {
+        throw new BusinessException(
+          ErrorCode.TOURNAMENT_STATE_INVALID,
+          '当前状态不能开赛'
+        )
+      }
+      if (t.format !== 'single_elim') {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '仅单败淘汰支持开赛（其他赛制 v2.11+）'
+        )
+      }
+
+      // 清理已有 bracket（避免重复调用产生脏数据）
+      await tx.tournamentBracketMatch.deleteMany({
+        where: { tournamentId: id }
+      })
+
+      // 按报名顺序分配 seed；filter 掉 withdrawn/disqualified
+      const regs = await tx.tournamentRegistration.findMany({
+        where: {
+          tournamentId: id,
+          status: TournamentRegistrationStatus.confirmed
+        },
+        orderBy: { registeredAt: 'asc' }
+      })
+      if (regs.length < t.minPlayers) {
+        throw new BusinessException(
+          ErrorCode.TOURNAMENT_STATE_INVALID,
+          `报名人数不足 ${t.minPlayers}`
+        )
+      }
+      // 写入 seed
+      for (let i = 0; i < regs.length; i++) {
+        await tx.tournamentRegistration.update({
+          where: { id: regs[i].id },
+          data: { seed: i + 1 }
+        })
+      }
+      const seedToReg = new Map<number, TournamentRegistration>()
+      regs.forEach((r, i) => seedToReg.set(i + 1, r))
+
+      const plan = planBracket(regs.length)
+
+      // 生成所有 round 的 pending bracket
+      // 存一个 grid[round][slot] = id，供首轮 walkover 时向上回填
+      const grid: string[][] = []
+      for (let r = 0; r < plan.rounds; r++) {
+        const row: string[] = []
+        for (let s = 0; s < plan.matchesPerRound[r]; s++) {
+          const bid = genId('bm')
+          row.push(bid)
+        }
+        grid.push(row)
+      }
+
+      // 首轮：按 firstRoundSeeds 配对
+      const firstRound = plan.firstRoundSeeds
+      type BracketCreateInput = Parameters<
+        typeof tx.tournamentBracketMatch.create
+      >[0]['data']
+      const firstRoundRecords: BracketCreateInput[] = []
+      const walkoverWinners: Array<{ round: number; slot: number; regId: string }> = []
+
+      for (let s = 0; s < plan.matchesPerRound[0]; s++) {
+        const seedA = firstRound[s * 2]
+        const seedB = firstRound[s * 2 + 1]
+        const regA = seedA ? seedToReg.get(seedA) ?? null : null
+        const regB = seedB ? seedToReg.get(seedB) ?? null : null
+        const id = grid[0][s]
+
+        let status: BracketMatchStatus = BracketMatchStatus.pending
+        let winnerRegistrationId: string | null = null
+
+        if (regA && !regB) {
+          status = BracketMatchStatus.walkover
+          winnerRegistrationId = regA.id
+          walkoverWinners.push({ round: 1, slot: s, regId: regA.id })
+        } else if (!regA && regB) {
+          status = BracketMatchStatus.walkover
+          winnerRegistrationId = regB.id
+          walkoverWinners.push({ round: 1, slot: s, regId: regB.id })
+        } else if (regA && regB) {
+          status = BracketMatchStatus.ready
+        }
+        // 两边都 null 基本不会出现（奇数 BYE 只会落在头部一侧）
+
+        firstRoundRecords.push({
+          id,
+          tournamentId: id // placeholder; overwritten below
+        } as BracketCreateInput)
+        // 真正 create
+        await tx.tournamentBracketMatch.create({
+          data: {
+            id,
+            tournamentId: t.id,
+            round: 1,
+            slotInRound: s,
+            playerARegistrationId: regA?.id ?? null,
+            playerBRegistrationId: regB?.id ?? null,
+            status,
+            winnerRegistrationId
+          }
+        })
+      }
+
+      // 后续 round：全 pending，无玩家
+      for (let r = 1; r < plan.rounds; r++) {
+        for (let s = 0; s < plan.matchesPerRound[r]; s++) {
+          await tx.tournamentBracketMatch.create({
+            data: {
+              id: grid[r][s],
+              tournamentId: t.id,
+              round: r + 1,
+              slotInRound: s,
+              status: BracketMatchStatus.pending
+            }
+          })
+        }
+      }
+
+      // 处理首轮 walkover：填入第二轮对应位置
+      for (const w of walkoverWinners) {
+        const nextRound = w.round + 1
+        if (nextRound > plan.rounds) continue
+        const nextSlot = Math.floor(w.slot / 2)
+        const nextId = grid[nextRound - 1][nextSlot]
+        // 决定填 A 还是 B：偶数 slot 的 winner → playerA，奇数 slot → playerB
+        const side = w.slot % 2 === 0 ? 'playerARegistrationId' : 'playerBRegistrationId'
+        const existing = await tx.tournamentBracketMatch.findUnique({
+          where: { id: nextId }
+        })
+        const updated: Prisma.TournamentBracketMatchUpdateInput = {
+          [side]: w.regId
+        } as Prisma.TournamentBracketMatchUpdateInput
+        await tx.tournamentBracketMatch.update({
+          where: { id: nextId },
+          data: updated
+        })
+        // 如果下一轮双方都已就位，状态置 ready
+        const refreshed = await tx.tournamentBracketMatch.findUnique({
+          where: { id: nextId }
+        })
+        if (
+          refreshed?.playerARegistrationId &&
+          refreshed?.playerBRegistrationId &&
+          refreshed.status === BracketMatchStatus.pending
+        ) {
+          await tx.tournamentBracketMatch.update({
+            where: { id: nextId },
+            data: { status: BracketMatchStatus.ready }
+          })
+        }
+        void existing
+      }
+
+      return tx.tournament.update({
+        where: { id },
+        data: { status: TournamentStatus.in_progress }
+      })
+    })
+  }
+
+  // ============ bracket 查询 ============
+
+  async getBracket(tournamentId: string) {
+    const t = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId }
+    })
+    if (!t) {
+      throw new BusinessException(
+        ErrorCode.TOURNAMENT_NOT_FOUND,
+        '赛事不存在'
+      )
+    }
+    const items = await this.prisma.tournamentBracketMatch.findMany({
+      where: { tournamentId },
+      orderBy: [{ round: 'asc' }, { slotInRound: 'asc' }],
+      include: {
+        playerA: { select: { id: true, displayName: true, seed: true, userId: true } },
+        playerB: { select: { id: true, displayName: true, seed: true, userId: true } },
+        winner: { select: { id: true, displayName: true, seed: true, userId: true } }
+      }
+    })
+    // 分组为 round → slots
+    const rounds: Record<number, typeof items> = {}
+    for (const it of items) {
+      if (!rounds[it.round]) rounds[it.round] = []
+      rounds[it.round].push(it)
+    }
+    const roundList = Object.keys(rounds)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((r) => ({ round: r, matches: rounds[r] }))
+    return {
+      tournamentId,
+      status: t.status,
+      rounds: roundList,
+      totalRounds: roundList.length
+    }
   }
 
   // ============ 报名 / 取消报名（C 端 user）============

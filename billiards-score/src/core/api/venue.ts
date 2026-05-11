@@ -173,6 +173,36 @@ export interface MyRegistration {
   registeredAt: string
 }
 
+export interface BracketPlayerRef {
+  id: string
+  displayName: string
+  seed: number | null
+  userId: string
+}
+
+export interface BracketMatchItem {
+  id: string
+  tournamentId: string
+  round: number
+  slotInRound: number
+  playerARegistrationId: string | null
+  playerBRegistrationId: string | null
+  playerA: BracketPlayerRef | null
+  playerB: BracketPlayerRef | null
+  winnerRegistrationId: string | null
+  winner: BracketPlayerRef | null
+  matchId: string | null
+  status: 'pending' | 'ready' | 'in_progress' | 'completed' | 'walkover'
+  scheduledAt: string | null
+}
+
+export interface BracketTree {
+  tournamentId: string
+  status: string
+  totalRounds: number
+  rounds: Array<{ round: number; matches: BracketMatchItem[] }>
+}
+
 export const tournamentsPublicApi = {
   list: (params: {
     venueId?: string
@@ -233,7 +263,13 @@ export const tournamentsPublicApi = {
         tournament: TournamentItem
       }>
       total: number
-    }>(`/me/tournaments`, { toast: false })
+    }>(`/me/tournaments`, { toast: false }),
+
+  bracket: (id: string) =>
+    callApi<BracketTree>(`/tournaments/${id}/bracket`, {
+      auth: false,
+      toast: false
+    })
 }
 
 export const venueApplicationApi = {

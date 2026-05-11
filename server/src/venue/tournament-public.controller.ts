@@ -42,6 +42,11 @@ export class TournamentPublicController {
     return this.service.registrationsPublic(id)
   }
 
+  @Get(':id/bracket')
+  async bracket(@Param('id') id: string) {
+    return this.service.getBracket(id)
+  }
+
   @Post(':id/register')
   @UseGuards(UserAuthGuard)
   @HttpCode(HttpStatus.OK)

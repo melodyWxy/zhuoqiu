@@ -177,6 +177,46 @@ export interface CreateTournamentPayload {
 
 export type UpdateTournamentPayload = Partial<CreateTournamentPayload>
 
+export type BracketMatchStatus =
+  | 'pending'
+  | 'ready'
+  | 'in_progress'
+  | 'completed'
+  | 'walkover'
+
+export interface BracketPlayerRef {
+  id: string
+  displayName: string
+  seed: number | null
+  userId: string
+}
+
+export interface BracketMatchItem {
+  id: string
+  tournamentId: string
+  round: number
+  slotInRound: number
+  playerARegistrationId: string | null
+  playerBRegistrationId: string | null
+  playerA: BracketPlayerRef | null
+  playerB: BracketPlayerRef | null
+  winnerRegistrationId: string | null
+  winner: BracketPlayerRef | null
+  matchId: string | null
+  status: BracketMatchStatus
+  scheduledAt: string | null
+}
+
+export interface BracketTree {
+  tournamentId: string
+  status: string
+  totalRounds: number
+  rounds: Array<{
+    round: number
+    matches: BracketMatchItem[]
+  }>
+}
+
 export const tournamentMerchantApi = {
   list: (params: { status?: TournamentStatus; page?: number; pageSize?: number } = {}) =>
     venueHttp
@@ -241,7 +281,17 @@ export const tournamentMerchantApi = {
       .post<{ registration: TournamentRegistrationItem }>(
         `/venue/tournaments/${id}/registrations/${regId}/kick`
       )
-      .then((r) => r.data)
+      .then((r) => r.data),
+
+  start: (id: string) =>
+    venueHttp
+      .post<{ tournament: TournamentItem }>(`/venue/tournaments/${id}/start`)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  bracket: (id: string) =>
+    venueHttp
+      .get<BracketTree>(`/venue/tournaments/${id}/bracket`)
+      .then((r) => r.data as unknown as BracketTree)
 }
 
 export const uploadApi = {

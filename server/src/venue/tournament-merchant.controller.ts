@@ -115,6 +115,22 @@ export class TournamentMerchantController {
     return { tournament: t }
   }
 
+  @Post(':id/start')
+  @RequireClient('admin_web')
+  @HttpCode(HttpStatus.OK)
+  async start(
+    @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
+    @Param('id') id: string
+  ) {
+    const t = await this.service.startTournament(id, jwt.sub)
+    return { tournament: t }
+  }
+
+  @Get(':id/bracket')
+  async bracket(@Param('id') id: string) {
+    return this.service.getBracket(id)
+  }
+
   @Get(':id/registrations')
   async registrations(
     @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
