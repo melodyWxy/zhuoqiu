@@ -51,12 +51,22 @@ export class MatchController {
     @CurrentUser() user: UserJwtPayload,
     @Body() dto: JoinMatchDto
   ) {
-    return this.matchService.joinByCode(dto.code, user.sub, dto.slot)
+    return this.matchService.joinByCode(
+      dto.code,
+      user.sub,
+      dto.slot,
+      dto.displayName
+    )
   }
 
   @Get('matches/:idOrCode')
   async detail(@Param('idOrCode') idOrCode: string) {
     return this.matchService.detail(idOrCode)
+  }
+
+  @Get('matches/:id/events')
+  async events(@Param('id') id: string) {
+    return this.matchService.listEvents(id)
   }
 
   @Post('matches/:id/seat')
@@ -70,7 +80,7 @@ export class MatchController {
       if (!dto.slot) {
         throw new BusinessException(ErrorCode.BAD_REQUEST, '占位必须带 slot')
       }
-      await this.matchService.occupySlot(id, user.sub, dto.slot)
+      await this.matchService.occupySlot(id, user.sub, dto.slot, dto.displayName)
     } else if (dto.action === 'leave') {
       await this.matchService.leaveSlot(id, user.sub)
     } else {

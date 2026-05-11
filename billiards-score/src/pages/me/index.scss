@@ -145,6 +145,27 @@
   margin-bottom: 10px;
 }
 
+.history-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.history-tab {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-radius: 4px;
+
+  &.active {
+    background: var(--accent);
+    color: var(--primary-dark);
+    font-weight: 600;
+  }
+}
+
 .placeholder {
   display: flex;
   flex-direction: column;

@@ -14,8 +14,10 @@ type WinKind = 'normal' | 'small' | 'big' | 'golden9'
 export default function OnlineNineBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [busy, setBusy] = useState(false)
+  const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
+  const selfInitiatedEnd = useRef(false) // 区分"自己结束"vs"被动收到结束事件"
 
   const refresh = useCallback(async () => {
     try {
@@ -38,12 +40,19 @@ export default function OnlineNineBall({ matchId }: Props) {
 
     const off = sock.on((msg: WsMessage) => {
       if (msg.op === 'match_event' && msg.data?.matchId === matchId) {
-        // 收到事件 → 拉最新详情（简单可靠）
+        const ev = msg.data.event
         refresh()
+        // 比赛被别人结束 → 3s 倒计时跳"我的"
+        if (
+          (ev?.type === 'end' || ev?.type === 'force_end') &&
+          !selfInitiatedEnd.current
+        ) {
+          setEndedOverlay({ countdown: 3 })
+        }
       } else if (msg.op === 'kicked' && msg.data?.matchId === matchId) {
         if (msg.data.userId === currentUserId) {
           Taro.showToast({ title: '你被管理员踢出', icon: 'none' })
-          setTimeout(() => Taro.switchTab({ url: '/pages/index/index' }), 1500)
+          setTimeout(() => Taro.switchTab({ url: '/pages/me/index' }), 1500)
         }
       }
     })
@@ -55,6 +64,19 @@ export default function OnlineNineBall({ matchId }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, refresh])
+
+  // 倒计时跳转
+  useEffect(() => {
+    if (!endedOverlay) return
+    if (endedOverlay.countdown <= 0) {
+      Taro.switchTab({ url: '/pages/me/index' })
+      return
+    }
+    const t = setTimeout(() => {
+      setEndedOverlay((s) => (s ? { countdown: s.countdown - 1 } : s))
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [endedOverlay])
 
   if (!detail) {
     return <View style={{ padding: 40, textAlign: 'center' }}>加载中...</View>
@@ -158,20 +180,43 @@ export default function OnlineNineBall({ matchId }: Props) {
     }
   }
 
+  const isOwner = detail.ownerUserId === currentUserId
+
   const handleEnd = async () => {
-    if (detail.ownerUserId !== currentUserId) {
-      Taro.showToast({ title: '只有房主能结束', icon: 'none' })
-      return
-    }
+    if (!isOwner) return
     const res = await Taro.showModal({
       title: '结束比赛',
-      content: '确认结束本场？',
+      content: '确认结束本场？所有人都会被自动退出。',
       confirmText: '结束',
       cancelText: '取消'
     }).catch(() => null)
     if (!res?.confirm) return
+    selfInitiatedEnd.current = true
     await matchApi.end(matchId)
-    refresh()
+    Taro.showToast({ title: '比赛已结束', icon: 'success' })
+    setTimeout(() => {
+      Taro.switchTab({ url: '/pages/me/index' })
+    }, 800)
+  }
+
+  const handleLeave = async () => {
+    const res = await Taro.showModal({
+      title: '退出房间',
+      content: iAmParticipant
+        ? '退出后该号位将空出，其他人可占位。'
+        : '退出观战。',
+      confirmText: '退出',
+      cancelText: '取消'
+    }).catch(() => null)
+    if (!res?.confirm) return
+    try {
+      if (iAmParticipant) {
+        await matchApi.seat(matchId, 'leave')
+      }
+    } catch {
+      // 即使后端失败也跳走
+    }
+    Taro.switchTab({ url: '/pages/me/index' })
   }
 
   const handleShare = () => {
@@ -188,23 +233,37 @@ export default function OnlineNineBall({ matchId }: Props) {
 
   return (
     <View className='nine-ball-page'>
-      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12 }}>
+      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px' }}>
         <Text className='header-title'>九球追分 · 联机</Text>
-        <View style={{ display: 'flex', gap: 8 }}>
+        {isOwner ? (
           <View
-            style={{ padding: '4px 10px', background: 'rgba(212,175,55,0.2)', borderRadius: 6, color: '#d4af37', fontSize: 12 }}
-            onClick={handleShare}
-          >
-            🔗 {detail.code ?? '—'}
-          </View>
-          <View
-            style={{ padding: '4px 10px', background: 'rgba(239,68,68,0.15)', borderRadius: 6, color: '#ef4444', fontSize: 12 }}
+            style={{ padding: '6px 14px', background: 'rgba(239,68,68,0.15)', borderRadius: 8, color: '#ef4444', fontSize: 13, fontWeight: 600 }}
             onClick={handleEnd}
           >
-            ✕
+            ✕ 结束
           </View>
-        </View>
+        ) : (
+          <View
+            style={{ padding: '6px 14px', background: 'rgba(160,168,164,0.15)', borderRadius: 8, color: '#a0a8a4', fontSize: 13, fontWeight: 600 }}
+            onClick={handleLeave}
+          >
+            ← 退出
+          </View>
+        )}
       </View>
+
+      {detail.code && detail.state !== 'ended' && (
+        <View
+          className='room-code-banner'
+          onClick={handleShare}
+        >
+          <Text className='rcb-label'>🔗 房间码</Text>
+          <Text className='rcb-code'>{detail.code}</Text>
+          <Text className='rcb-hint'>
+            {players.filter((p) => p.userId).length}/{players.length} 人在位 · 点击复制
+          </Text>
+        </View>
+      )}
 
       <View className='players-section'>
         {players.map((p) => (
@@ -263,6 +322,23 @@ export default function OnlineNineBall({ matchId }: Props) {
           </Button>
         </View>
       </View>
+
+      {endedOverlay && (
+        <View className='ended-overlay'>
+          <View className='ended-box'>
+            <Text className='ended-title'>比赛已结束</Text>
+            <Text className='ended-sub'>
+              {endedOverlay.countdown} 秒后自动退出到"我的"
+            </Text>
+            <View
+              className='ended-btn'
+              onClick={() => Taro.switchTab({ url: '/pages/me/index' })}
+            >
+              立即退出
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

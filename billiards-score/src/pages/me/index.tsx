@@ -1,16 +1,19 @@
 import { View, Text } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useState } from 'react'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useEffect, useState } from 'react'
 import { useUserStore } from '../../core/user/store'
 import { useMatchStore, MatchRecord } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
 import { authApi } from '../../core/api/auth'
+import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
 import AvatarPickerModal from '../../components/AvatarPickerModal'
 import LoginSheet from '../../components/LoginSheet'
 import BindPhoneSheet from '../../components/BindPhoneSheet'
 import './index.scss'
+
+type CloudHistoryItem = MatchDetail & { durationMs?: number }
 
 const AVATAR_CHOICES = ['🎱', '🧍', '🦸', '🥷', '🐯', '🦊', '🐼', '🐶', '🐱', '🦁', '🐰', '🐻']
 
@@ -59,6 +62,33 @@ export default function MePage() {
   const [avatarModalOpen, setAvatarModalOpen] = useState(false)
   const [loginSheetOpen, setLoginSheetOpen] = useState(false)
   const [bindPhoneSheetOpen, setBindPhoneSheetOpen] = useState(false)
+  const [tab, setTab] = useState<'cloud' | 'local'>('cloud')
+  const [cloudHistory, setCloudHistory] = useState<CloudHistoryItem[]>([])
+
+  // 加载云端历史
+  const loadCloudHistory = async () => {
+    if (!cloudUser) return
+    try {
+      const r = await matchApi.myHistory(1, 30)
+      setCloudHistory(r.items as CloudHistoryItem[])
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (cloudUser) {
+      setTab('cloud')
+      loadCloudHistory()
+    } else {
+      setTab('local')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudUser?.id])
+
+  useDidShow(() => {
+    if (cloudUser) loadCloudHistory()
+  })
 
   const handleLogout = async () => {
     const res = await Taro.showModal({
@@ -138,10 +168,90 @@ export default function MePage() {
       </View>
 
       <View className='section'>
-        <View className='section-title'>历史记录</View>
-        {records.length === 0 ? (
+        <View className='section-title' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text>历史记录</Text>
+          {cloudUser && (
+            <View className='history-tabs'>
+              <Text
+                className={`history-tab ${tab === 'cloud' ? 'active' : ''}`}
+                onClick={() => setTab('cloud')}
+              >
+                云端 {cloudHistory.length > 0 && `(${cloudHistory.length})`}
+              </Text>
+              <Text
+                className={`history-tab ${tab === 'local' ? 'active' : ''}`}
+                onClick={() => setTab('local')}
+              >
+                本地 {records.length > 0 && `(${records.length})`}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {tab === 'cloud' ? (
+          cloudHistory.length === 0 ? (
+            <View className='placeholder'>
+              <Text className='placeholder-text'>
+                {cloudUser ? '还没有云端比赛记录' : '登录后可看云端记录'}
+              </Text>
+              <Text className='placeholder-hint'>
+                {cloudUser ? '去首页开一局联机试试' : ''}
+              </Text>
+            </View>
+          ) : (
+            <View className='history-list'>
+              {cloudHistory.map((m) => {
+                const players = (m.players ?? []).filter((p) => p.isCurrent)
+                const isNine = m.type === 'nine_ball'
+                const compScores = m.computed?.scores ?? {}
+                const compWins = m.computed?.wins ?? {}
+                const scores = isNine
+                  ? players.map((p) => compScores[p.slot] ?? 0)
+                  : players.map((p) => compWins[p.slot] ?? 0)
+                const top = players.length
+                  ? players.reduce((a, b) =>
+                      isNine
+                        ? (compScores[a.slot] ?? 0) >= (compScores[b.slot] ?? 0) ? a : b
+                        : (compWins[a.slot] ?? 0) >= (compWins[b.slot] ?? 0) ? a : b
+                    , players[0])
+                  : null
+                return (
+                  <View
+                    key={m.id}
+                    className='history-item'
+                    onClick={() =>
+                      Taro.navigateTo({ url: `/pages/match-detail/index?id=${m.id}` })
+                    }
+                  >
+                    <View className='item-icon'>🎱</View>
+                    <View className='item-info'>
+                      <Text className='item-title'>
+                        {isNine ? '九球追分' : '中式八球'}
+                        {m.code && <Text style={{ opacity: 0.5, fontSize: 11, marginLeft: 6 }}>{m.code}</Text>}
+                      </Text>
+                      <Text className='item-players'>
+                        {players.map((p) => p.displayName).join(' vs ')}
+                      </Text>
+                      <Text className='item-meta'>
+                        时长 {formatElapsed(Number(m.timer?.accumulatedMs ?? 0))} · 冠军 {top?.displayName ?? '—'}
+                      </Text>
+                    </View>
+                    <View className='item-score'>
+                      <Text className='score-text'>{scores.join(' : ')}</Text>
+                      <Text className='item-time'>
+                        {m.endedAt
+                          ? new Date(m.endedAt).toLocaleDateString() + ' ' + new Date(m.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '—'}
+                      </Text>
+                    </View>
+                  </View>
+                )
+              })}
+            </View>
+          )
+        ) : records.length === 0 ? (
           <View className='placeholder'>
-            <Text className='placeholder-text'>还没有比赛记录</Text>
+            <Text className='placeholder-text'>还没有本地比赛记录</Text>
             <Text className='placeholder-hint'>去首页开一局试试</Text>
           </View>
         ) : (

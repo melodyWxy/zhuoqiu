@@ -53,19 +53,19 @@ export const matchApi = {
     playerSlots: PlayerSlotInput[]
   }) => callApi<MatchDetail>('/matches', { method: 'POST', data: input }),
 
-  join: (code: string, slot?: number) =>
+  join: (code: string, slot?: number, displayName?: string) =>
     callApi<{ match: MatchDetail; role: 'player' | 'spectator' }>(
       '/matches/join',
-      { method: 'POST', data: { code, slot } }
+      { method: 'POST', data: { code, slot, displayName } }
     ),
 
   detail: (idOrCode: string) =>
     callApi<MatchDetail>(`/matches/${idOrCode}`),
 
-  seat: (id: string, action: 'occupy' | 'leave', slot?: number) =>
+  seat: (id: string, action: 'occupy' | 'leave', slot?: number, displayName?: string) =>
     callApi<MatchDetail>(`/matches/${id}/seat`, {
       method: 'POST',
-      data: { action, slot }
+      data: { action, slot, displayName }
     }),
 
   event: (
@@ -98,5 +98,21 @@ export const matchApi = {
       total: number
       page: number
       pageSize: number
-    }>(`/me/matches?page=${page}&pageSize=${pageSize}`)
+    }>(`/me/matches?page=${page}&pageSize=${pageSize}`),
+
+  events: (id: string) =>
+    callApi<{
+      items: Array<{
+        id: number
+        serverSeq: number
+        actorUserId: string | null
+        actorAdminId: string | null
+        type: string
+        payloadJson: Record<string, unknown>
+        undone: boolean
+        undoneByEventId: number | null
+        createdAt: string
+      }>
+      total: number
+    }>(`/matches/${id}/events`)
 }

@@ -66,6 +66,22 @@ export class MatchService {
 
     const normalized = this.normalizeRules(input.type, input.rules)
 
+    // 自动关闭该用户作为 owner 的所有未结束房间（避免房主同时开多场）
+    const lingering = await this.prisma.match.findMany({
+      where: {
+        ownerUserId: input.ownerUserId,
+        state: { in: [MatchState.waiting, MatchState.in_progress, MatchState.paused] }
+      },
+      select: { id: true }
+    })
+    for (const m of lingering) {
+      try {
+        await this.endByOwner(m.id, input.ownerUserId, 'auto_closed_by_new_match')
+      } catch {
+        // ignore（旧场可能并发被改）
+      }
+    }
+
     // 循环生成房间码直到唯一
     let code = genMatchCode()
     for (let i = 0; i < 5; i++) {
@@ -204,7 +220,7 @@ export class MatchService {
 
   // ============ 加入 / 占位 ============
 
-  async joinByCode(code: string, userId: string, slot?: number) {
+  async joinByCode(code: string, userId: string, slot?: number, displayName?: string) {
     const match = await this.prisma.match.findUnique({ where: { code: code.toUpperCase() } })
     if (!match) {
       throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
@@ -212,15 +228,14 @@ export class MatchService {
     if (match.state === MatchState.ended || match.state === MatchState.dissolved) {
       throw new BusinessException(ErrorCode.MATCH_CODE_EXPIRED, '房间已结束')
     }
-    // 未指定 slot → 作为观众
     if (!slot) {
       return { match: await this.detail(match.id), role: 'spectator' as const }
     }
-    await this.occupySlot(match.id, userId, slot)
+    await this.occupySlot(match.id, userId, slot, displayName)
     return { match: await this.detail(match.id), role: 'player' as const }
   }
 
-  async occupySlot(matchId: string, userId: string, slot: number) {
+  async occupySlot(matchId: string, userId: string, slot: number, displayName?: string) {
     return this.withMatchLock(matchId, async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId } })
       if (!match) {
@@ -236,20 +251,25 @@ export class MatchService {
         throw new BusinessException(ErrorCode.BAD_REQUEST, '该号位不存在')
       }
       if (occupant.userId === userId) {
-        return // 幂等
+        return
       }
       if (occupant.userId !== null) {
         throw new BusinessException(ErrorCode.MATCH_FULL, '该号位已被其他人占据')
       }
+      // 若占位者带了自己的 displayName，则覆盖号位原昵称
+      const finalName =
+        displayName && displayName.trim().length > 0
+          ? displayName.trim().slice(0, 32)
+          : occupant.displayName
       await tx.matchPlayer.update({
         where: { id: occupant.id },
-        data: { userId }
+        data: { userId, displayName: finalName }
       })
       await this.insertEvent(tx, matchId, {
         type: 'seat_occupy',
         slot,
         userId,
-        name: occupant.displayName
+        name: finalName
       })
     })
   }
@@ -508,6 +528,19 @@ export class MatchService {
 
   // ============ 历史 ============
 
+  async listEvents(matchId: string) {
+    const match = await this.prisma.match.findUnique({ where: { id: matchId } })
+    if (!match) {
+      throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
+    }
+    const items = await this.prisma.matchEvent.findMany({
+      where: { matchId },
+      orderBy: { serverSeq: 'asc' },
+      take: 500
+    })
+    return { items, total: items.length }
+  }
+
   async listMyMatches(userId: string, page: number, pageSize: number) {
     const where: Prisma.MatchWhereInput = {
       OR: [
@@ -522,13 +555,15 @@ export class MatchService {
         orderBy: { endedAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          players: { where: { isCurrent: true }, orderBy: { slot: 'asc' } }
-        }
+        select: { id: true }
       }),
       this.prisma.match.count({ where })
     ])
-    return { items: matches, total, page, pageSize }
+    // 对每个 match 走一次 detail 拿到 computed/timer/rules（最多 pageSize 个，可接受）
+    const items = await Promise.all(
+      matches.map((m) => this.detailFromTx(this.prisma, m.id))
+    )
+    return { items, total, page, pageSize }
   }
 
   // ============ 帮助函数 ============

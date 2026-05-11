@@ -8,6 +8,7 @@ import { useUserStore } from '../../core/user/store'
 import { useAuthStore } from '../../core/auth/store'
 import { matchApi } from '../../core/api/match'
 import { DEFAULT_NINE_BALL_RULES } from '../../core/constants'
+import LoginSheet from '../../components/LoginSheet'
 import './index.scss'
 
 type GameType = 'nine-ball' | 'eight-ball'
@@ -42,8 +43,10 @@ export default function ConfigPage() {
   const [customWins, setCustomWins] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(true)
   const cloudUser = useAuthStore((s) => s.user)
-  const [online, setOnline] = useState(false)
+  // 已登录默认联机；未登录默认本地
+  const [online, setOnline] = useState(!!cloudUser)
   const [creating, setCreating] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
   const [scoreConfig, setScoreConfig] = useState<Record<string, string>>(() =>
     Object.fromEntries(SCORE_FIELDS.map((f) => [f.key, String(f.defaultValue)]))
   )
@@ -236,8 +239,9 @@ export default function ConfigPage() {
           <View
             className={`online-toggle ${online ? 'online-on' : ''}`}
             onClick={() => {
+              // 未登录且要开启联机 → 弹登录
               if (!cloudUser && !online) {
-                Taro.showToast({ title: '请先登录才能联机', icon: 'none' })
+                setLoginOpen(true)
                 return
               }
               setOnline((v) => !v)
@@ -265,6 +269,12 @@ export default function ConfigPage() {
           </Button>
         </View>
       </View>
+
+      <LoginSheet
+        visible={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onSuccess={() => setOnline(true)}
+      />
     </View>
   )
 }

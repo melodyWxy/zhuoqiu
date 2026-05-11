@@ -12,8 +12,10 @@ interface Props {
 export default function OnlineEightBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [busy, setBusy] = useState(false)
+  const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
+  const selfInitiatedEnd = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -31,7 +33,16 @@ export default function OnlineEightBall({ matchId }: Props) {
       .catch(() => Taro.showToast({ title: 'WS 连接失败', icon: 'none' }))
 
     const off = sock.on((msg: WsMessage) => {
-      if (msg.op === 'match_event' && msg.data?.matchId === matchId) refresh()
+      if (msg.op === 'match_event' && msg.data?.matchId === matchId) {
+        const ev = msg.data.event
+        refresh()
+        if (
+          (ev?.type === 'end' || ev?.type === 'force_end') &&
+          !selfInitiatedEnd.current
+        ) {
+          setEndedOverlay({ countdown: 3 })
+        }
+      }
     })
 
     return () => {
@@ -40,6 +51,19 @@ export default function OnlineEightBall({ matchId }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, refresh])
+
+  // 倒计时跳转
+  useEffect(() => {
+    if (!endedOverlay) return
+    if (endedOverlay.countdown <= 0) {
+      Taro.switchTab({ url: '/pages/me/index' })
+      return
+    }
+    const t = setTimeout(() => {
+      setEndedOverlay((s) => (s ? { countdown: s.countdown - 1 } : s))
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [endedOverlay])
 
   if (!detail) return <View style={{ padding: 40, textAlign: 'center' }}>加载中…</View>
 
@@ -79,17 +103,37 @@ export default function OnlineEightBall({ matchId }: Props) {
     }
   }
 
+  const isOwner = detail.ownerUserId === currentUserId
+
   const handleEnd = async () => {
-    if (detail.ownerUserId !== currentUserId) return
+    if (!isOwner) return
     const res = await Taro.showModal({
       title: '结束比赛',
-      content: '确认结束？',
+      content: '确认结束？所有人都会被自动退出。',
       confirmText: '结束',
       cancelText: '取消'
     }).catch(() => null)
     if (!res?.confirm) return
+    selfInitiatedEnd.current = true
     await matchApi.end(matchId)
-    refresh()
+    Taro.showToast({ title: '比赛已结束', icon: 'success' })
+    setTimeout(() => {
+      Taro.switchTab({ url: '/pages/me/index' })
+    }, 800)
+  }
+
+  const handleLeave = async () => {
+    const res = await Taro.showModal({
+      title: '退出房间',
+      content: iAmParticipant ? '退出后号位空出。' : '退出观战。',
+      confirmText: '退出',
+      cancelText: '取消'
+    }).catch(() => null)
+    if (!res?.confirm) return
+    try {
+      if (iAmParticipant) await matchApi.seat(matchId, 'leave')
+    } catch {}
+    Taro.switchTab({ url: '/pages/me/index' })
   }
 
   const handleShare = () => {
@@ -106,23 +150,34 @@ export default function OnlineEightBall({ matchId }: Props) {
 
   return (
     <View className='eight-ball-page'>
-      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12 }}>
+      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px' }}>
         <Text className='header-title'>中式八球 · 联机</Text>
-        <View style={{ display: 'flex', gap: 8 }}>
+        {isOwner ? (
           <View
-            style={{ padding: '4px 10px', background: 'rgba(212,175,55,0.2)', borderRadius: 6, color: '#d4af37', fontSize: 12 }}
-            onClick={handleShare}
-          >
-            🔗 {detail.code ?? '—'}
-          </View>
-          <View
-            style={{ padding: '4px 10px', background: 'rgba(239,68,68,0.15)', borderRadius: 6, color: '#ef4444', fontSize: 12 }}
+            style={{ padding: '6px 14px', background: 'rgba(239,68,68,0.15)', borderRadius: 8, color: '#ef4444', fontSize: 13, fontWeight: 600 }}
             onClick={handleEnd}
           >
-            ✕
+            ✕ 结束
           </View>
-        </View>
+        ) : (
+          <View
+            style={{ padding: '6px 14px', background: 'rgba(160,168,164,0.15)', borderRadius: 8, color: '#a0a8a4', fontSize: 13, fontWeight: 600 }}
+            onClick={handleLeave}
+          >
+            ← 退出
+          </View>
+        )}
       </View>
+
+      {detail.code && detail.state !== 'ended' && (
+        <View className='room-code-banner' onClick={handleShare}>
+          <Text className='rcb-label'>🔗 房间码</Text>
+          <Text className='rcb-code'>{detail.code}</Text>
+          <Text className='rcb-hint'>
+            {players.filter((p) => p.userId).length}/{players.length} 人在位 · 点击复制
+          </Text>
+        </View>
+      )}
 
       <View className='players-section'>
         {players.map((p) => (
@@ -151,6 +206,23 @@ export default function OnlineEightBall({ matchId }: Props) {
           {iAmParticipant ? '点击玩家卡片 → 该玩家赢下本局' : '观战中，不能记分'}
         </View>
       </View>
+
+      {endedOverlay && (
+        <View className='ended-overlay'>
+          <View className='ended-box'>
+            <Text className='ended-title'>比赛已结束</Text>
+            <Text className='ended-sub'>
+              {endedOverlay.countdown} 秒后自动退出到"我的"
+            </Text>
+            <View
+              className='ended-btn'
+              onClick={() => Taro.switchTab({ url: '/pages/me/index' })}
+            >
+              立即退出
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

@@ -125,10 +125,20 @@
   padding: 12px;
   font-size: 15px;
   border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+
+  &:active { background: rgba(255, 255, 255, 0.15); }
 
   &.primary {
     background: var(--accent);
     color: var(--primary-dark);
+    border: none;
+  }
+
+  &[disabled] {
+    opacity: 0.5;
   }
 }
 

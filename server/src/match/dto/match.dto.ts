@@ -60,6 +60,11 @@ export class JoinMatchDto {
   @Min(1)
   @Max(3)
   slot?: number
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 32)
+  displayName?: string
 }
 
 export class SeatActionDto {
@@ -72,6 +77,11 @@ export class SeatActionDto {
   @Min(1)
   @Max(3)
   slot?: number
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 32)
+  displayName?: string
 }
 
 export class MatchEventDto {

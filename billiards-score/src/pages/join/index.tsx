@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react'
 import { matchApi } from '../../core/api/match'
 import { useAuthStore } from '../../core/auth/store'
 import { useGameTimer } from '../../core/game/timer'
+import LoginSheet from '../../components/LoginSheet'
 import './index.scss'
 
 export default function JoinPage() {
   const router = useRouter()
   const cloudUser = useAuthStore((s) => s.user)
+  const [loginOpen, setLoginOpen] = useState(false)
+
+  useEffect(() => {
+    if (!cloudUser) setLoginOpen(true)
+  }, [cloudUser])
+
   const [code, setCode] = useState(
     ((router.params.code as string) || '').toUpperCase()
   )
@@ -62,7 +69,11 @@ export default function JoinPage() {
     }
     setLoading(true)
     try {
-      const r = await matchApi.join(c, asSpectator ? undefined : (slot as number) || undefined)
+      const r = await matchApi.join(
+        c,
+        asSpectator ? undefined : (slot as number) || undefined,
+        asSpectator ? undefined : cloudUser.nickname
+      )
       const url =
         r.match.type === 'nine_ball'
           ? '/pages/nine-ball/index'
@@ -165,6 +176,8 @@ export default function JoinPage() {
           </View>
         )}
       </View>
+
+      <LoginSheet visible={loginOpen} onClose={() => setLoginOpen(false)} />
     </View>
   )
 }

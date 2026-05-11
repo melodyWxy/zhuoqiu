@@ -5,7 +5,8 @@ export default defineAppConfig({
     'pages/eight-ball/index',
     'pages/config/index',
     'pages/me/index',
-    'pages/join/index'
+    'pages/join/index',
+    'pages/match-detail/index'
   ],
   window: {
     navigationBarTitleText: '桌球计分',
