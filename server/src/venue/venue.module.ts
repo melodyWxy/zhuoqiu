@@ -7,6 +7,12 @@ import { VenueController } from './venue.controller'
 import { VenueService } from './venue.service'
 import { VenueApplicationService } from './venue-application.service'
 import { VenueAuthGuard } from './venue-auth.guard'
+import { TournamentService } from './tournament.service'
+import { TournamentMerchantController } from './tournament-merchant.controller'
+import {
+  TournamentPublicController,
+  MyTournamentsController
+} from './tournament-public.controller'
 
 @Module({
   imports: [AuthModule],
@@ -14,9 +20,17 @@ import { VenueAuthGuard } from './venue-auth.guard'
     VenueAuthController,
     VenueApplicationController,
     VenueApplicationAdminController,
-    VenueController
+    VenueController,
+    TournamentMerchantController,
+    TournamentPublicController,
+    MyTournamentsController
   ],
-  providers: [VenueService, VenueApplicationService, VenueAuthGuard],
-  exports: [VenueService, VenueApplicationService, VenueAuthGuard]
+  providers: [
+    VenueService,
+    VenueApplicationService,
+    VenueAuthGuard,
+    TournamentService
+  ],
+  exports: [VenueService, VenueApplicationService, TournamentService, VenueAuthGuard]
 })
 export class VenueModule {}

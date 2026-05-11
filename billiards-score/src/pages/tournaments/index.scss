@@ -1,0 +1,109 @@
+.tournaments-page {
+  min-height: 100vh;
+  background: var(--bg-page, #0d1013);
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tp-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.tp-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  border: 1px solid transparent;
+
+  &.active {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.tp-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 4px;
+}
+
+.tp-empty {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-secondary);
+}
+
+.tp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tp-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+
+  &:active { transform: scale(0.98); }
+}
+
+.tp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tp-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.tp-status {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tp-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tp-info-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.tp-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tp-fee {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.tp-prize {
+  font-size: 12px;
+  color: var(--accent);
+}

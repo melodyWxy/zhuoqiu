@@ -1,7 +1,12 @@
 import { View, Text, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { venuesPublicApi, type VenuePublic } from '../../core/api/venue'
+import {
+  tournamentsPublicApi,
+  venuesPublicApi,
+  type TournamentItem,
+  type VenuePublic
+} from '../../core/api/venue'
 import './index.scss'
 
 const DAY_LABEL: Record<string, string> = {
@@ -19,6 +24,7 @@ export default function VenueDetailPage() {
   const router = useRouter()
   const id = (router.params.id as string) || ''
   const [venue, setVenue] = useState<VenuePublic | null>(null)
+  const [tournaments, setTournaments] = useState<TournamentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,6 +38,18 @@ export default function VenueDetailPage() {
       try {
         const r = await venuesPublicApi.detail(id)
         setVenue(r.venue)
+        // 拉该球房的进行中/报名中赛事（取前 5 条）
+        const list = await tournamentsPublicApi.list({
+          venueId: id,
+          pageSize: 5
+        })
+        const active = list.items.filter(
+          (t) =>
+            t.status === 'registering' ||
+            t.status === 'registration_closed' ||
+            t.status === 'in_progress'
+        )
+        setTournaments(active)
       } catch (e) {
         const err = e as { code?: number; message?: string }
         setError(err.code === 60001 ? '球房不存在或已停用' : err.message ?? '加载失败')
@@ -138,7 +156,35 @@ export default function VenueDetailPage() {
 
       <View className='vd-card'>
         <Text className='vd-section-title'>赛事</Text>
-        <Text className='vd-soon'>P3 上线 · 赛事报名 + 赛程</Text>
+        {tournaments.length === 0 ? (
+          <Text className='vd-soon'>暂无进行中/报名中的赛事</Text>
+        ) : (
+          tournaments.map((t) => (
+            <View
+              key={t.id}
+              className='vd-tournament-row'
+              onClick={() =>
+                Taro.navigateTo({
+                  url: `/pages/tournament-detail/index?id=${t.id}`
+                })
+              }
+            >
+              <View className='vd-tournament-body'>
+                <Text className='vd-tournament-title'>🏆 {t.title}</Text>
+                <Text className='vd-tournament-sub'>
+                  {t.gameType === 'nine_ball' ? '九球' : '中八'} ·{' '}
+                  {t.registeredCount}/{t.maxPlayers} ·{' '}
+                  {t.status === 'registering'
+                    ? '报名中'
+                    : t.status === 'in_progress'
+                      ? '进行中'
+                      : '报名截止'}
+                </Text>
+              </View>
+              <Text className='vd-tournament-arrow'>→</Text>
+            </View>
+          ))
+        )}
       </View>
 
       <View className='vd-card'>

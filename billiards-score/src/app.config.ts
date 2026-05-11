@@ -10,7 +10,9 @@ export default defineAppConfig({
     'pages/venue-login/index',
     'pages/venue-apply/index',
     'pages/venues/index',
-    'pages/venue-detail/index'
+    'pages/venue-detail/index',
+    'pages/tournaments/index',
+    'pages/tournament-detail/index'
   ],
   window: {
     navigationBarTitleText: '桌球计分',

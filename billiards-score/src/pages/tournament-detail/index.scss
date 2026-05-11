@@ -1,0 +1,186 @@
+.tournament-detail-page {
+  min-height: 100vh;
+  background: var(--bg-page, #0d1013);
+  padding: 14px 14px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.td-empty {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-secondary);
+}
+
+.td-header {
+  padding: 6px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.td-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.td-status {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.td-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.td-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  border: 1px solid transparent;
+
+  &.active {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.td-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.td-card-clickable {
+  cursor: pointer;
+  &:active { transform: scale(0.99); }
+}
+
+.td-section {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.td-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.td-label {
+  color: var(--text-secondary);
+}
+
+.td-val {
+  color: var(--text-primary);
+  text-align: right;
+  flex: 1;
+}
+
+.td-notice {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.td-venue-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.td-venue-addr {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.td-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  &:last-child { border-bottom: none; }
+}
+
+.td-player-no {
+  width: 24px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.td-player-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.td-player-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.td-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--bg-page, #0d1013);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.td-cta-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.td-btn {
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px;
+  border: none;
+}
+
+.td-btn-primary {
+  background: var(--accent);
+  color: var(--primary-dark);
+}
+
+.td-btn-secondary {
+  background: rgba(160, 168, 164, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid var(--text-secondary);
+}
+
+.td-btn-disabled {
+  background: rgba(160, 168, 164, 0.1);
+  color: var(--text-secondary);
+}

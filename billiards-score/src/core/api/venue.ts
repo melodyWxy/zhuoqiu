@@ -116,6 +116,126 @@ export const venuesPublicApi = {
     })
 }
 
+// ============ 赛事（C 端） ============
+
+export type TournamentStatus =
+  | 'draft'
+  | 'registering'
+  | 'registration_closed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+
+export interface TournamentItem {
+  id: string
+  venueId: string
+  title: string
+  gameType: 'nine_ball' | 'eight_ball'
+  format: 'single_elim' | 'double_elim' | 'round_robin' | 'swiss'
+  rulesJson: Record<string, number>
+  maxPlayers: number
+  minPlayers: number
+  entryFeeCents: number
+  prizePoolText: string | null
+  registrationStartsAt: string
+  registrationEndsAt: string
+  matchStartsAt: string
+  coverImage: string | null
+  status: TournamentStatus
+  registeredCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TournamentDetailPublic extends TournamentItem {
+  venue: {
+    id: string
+    name: string
+    address: string
+    coverImage: string | null
+  } | null
+  noticeText: string | null
+}
+
+export interface TournamentRegPublic {
+  id: string
+  displayName: string
+  registeredAt: string
+  seed: number | null
+}
+
+export interface MyRegistration {
+  id: string
+  tournamentId: string
+  status: 'confirmed' | 'withdrawn' | 'disqualified'
+  displayName: string
+  seed: number | null
+  registeredAt: string
+}
+
+export const tournamentsPublicApi = {
+  list: (params: {
+    venueId?: string
+    status?: TournamentStatus
+    page?: number
+    pageSize?: number
+  } = {}) => {
+    const q = new URLSearchParams()
+    if (params.venueId) q.set('venueId', params.venueId)
+    if (params.status) q.set('status', params.status)
+    if (params.page) q.set('page', String(params.page))
+    if (params.pageSize) q.set('pageSize', String(params.pageSize))
+    const qs = q.toString()
+    return callApi<{
+      items: TournamentItem[]
+      total: number
+      page: number
+      pageSize: number
+    }>(`/tournaments${qs ? `?${qs}` : ''}`, { auth: false, toast: false })
+  },
+
+  detail: (id: string) =>
+    callApi<TournamentDetailPublic>(`/tournaments/${id}`, {
+      auth: false,
+      toast: false
+    }),
+
+  registrations: (id: string) =>
+    callApi<{ items: TournamentRegPublic[]; total: number }>(
+      `/tournaments/${id}/registrations`,
+      { auth: false, toast: false }
+    ),
+
+  register: (id: string, displayName?: string) =>
+    callApi<{ registration: MyRegistration }>(`/tournaments/${id}/register`, {
+      method: 'POST',
+      data: displayName ? { displayName } : {}
+    }),
+
+  withdraw: (id: string) =>
+    callApi<{ registration: MyRegistration }>(`/tournaments/${id}/withdraw`, {
+      method: 'POST'
+    }),
+
+  myRegistration: (id: string) =>
+    callApi<{ registration: MyRegistration | null }>(
+      `/tournaments/${id}/my-registration`,
+      { toast: false }
+    ),
+
+  myTournaments: () =>
+    callApi<{
+      items: Array<{
+        registrationId: string
+        registrationStatus: 'confirmed' | 'withdrawn' | 'disqualified'
+        seed: number | null
+        registeredAt: string
+        tournament: TournamentItem
+      }>
+      total: number
+    }>(`/me/tournaments`, { toast: false })
+}
+
 export const venueApplicationApi = {
   submit: (params: {
     payload: VenueApplicationPayload

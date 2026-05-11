@@ -369,3 +369,120 @@ model VenueApplication {
   @@index([createdAt])
   @@map("venue_applications")
 }
+
+// ============================================================
+// 赛事 · v2.10
+// ============================================================
+
+enum TournamentFormat {
+  single_elim
+  double_elim
+  round_robin
+  swiss
+}
+
+enum TournamentStatus {
+  draft
+  registering
+  registration_closed
+  in_progress
+  completed
+  cancelled
+}
+
+enum TournamentRegistrationStatus {
+  confirmed
+  withdrawn
+  disqualified
+}
+
+enum BracketMatchStatus {
+  pending
+  ready
+  in_progress
+  completed
+  walkover
+}
+
+model Tournament {
+  id                    String           @id // t_xxxxxxxx
+  venueId               String           @map("venue_id")
+
+  title                 String           @db.VarChar(128)
+  gameType              MatchType        @map("game_type")
+  format                TournamentFormat @default(single_elim)
+  rulesJson             Json             @map("rules_json")
+  maxPlayers            Int              @map("max_players") @db.SmallInt
+  minPlayers            Int              @default(4) @map("min_players") @db.SmallInt
+  entryFeeCents         Int              @default(0) @map("entry_fee_cents")
+  prizePoolText         String?          @map("prize_pool_text") @db.Text
+  registrationStartsAt  DateTime         @map("registration_starts_at")
+  registrationEndsAt    DateTime         @map("registration_ends_at")
+  matchStartsAt         DateTime         @map("match_starts_at")
+  coverImage            String?          @map("cover_image") @db.VarChar(512)
+  noticeText            String?          @map("notice_text") @db.Text
+
+  status                TournamentStatus @default(draft)
+  createdByAccountId    String           @map("created_by_account_id")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  registrations         TournamentRegistration[]
+  bracketMatches        TournamentBracketMatch[]
+
+  @@index([venueId, status])
+  @@index([status, registrationEndsAt])
+  @@index([createdByAccountId])
+  @@map("tournaments")
+}
+
+model TournamentRegistration {
+  id             String                       @id // reg_xxxxxxxx
+  tournamentId   String                       @map("tournament_id")
+  tournament     Tournament                   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  userId         String                       @map("user_id")
+  displayName    String                       @map("display_name") @db.VarChar(32)
+  phone          String                       @db.VarChar(20)
+
+  seed           Int?                         @db.SmallInt
+  status         TournamentRegistrationStatus @default(confirmed)
+  registeredAt   DateTime                     @default(now()) @map("registered_at")
+
+  bracketEntriesA TournamentBracketMatch[]    @relation("BracketPlayerA")
+  bracketEntriesB TournamentBracketMatch[]    @relation("BracketPlayerB")
+  bracketWins     TournamentBracketMatch[]    @relation("BracketWinner")
+
+  @@unique([tournamentId, userId])
+  @@index([userId])
+  @@index([tournamentId, status])
+  @@map("tournament_registrations")
+}
+
+model TournamentBracketMatch {
+  id                       String              @id // bm_xxxxxxxx
+  tournamentId             String              @map("tournament_id")
+  tournament               Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  round                    Int                 @db.SmallInt
+  slotInRound              Int                 @map("slot_in_round") @db.SmallInt
+
+  playerARegistrationId    String?             @map("player_a_registration_id")
+  playerA                  TournamentRegistration? @relation("BracketPlayerA", fields: [playerARegistrationId], references: [id])
+  playerBRegistrationId    String?             @map("player_b_registration_id")
+  playerB                  TournamentRegistration? @relation("BracketPlayerB", fields: [playerBRegistrationId], references: [id])
+
+  matchId                  String?             @unique @map("match_id")
+  winnerRegistrationId     String?             @map("winner_registration_id")
+  winner                   TournamentRegistration? @relation("BracketWinner", fields: [winnerRegistrationId], references: [id])
+
+  status                   BracketMatchStatus  @default(pending)
+  scheduledAt              DateTime?           @map("scheduled_at")
+
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+
+  @@unique([tournamentId, round, slotInRound])
+  @@index([tournamentId, round])
+  @@map("tournament_bracket_matches")
+}

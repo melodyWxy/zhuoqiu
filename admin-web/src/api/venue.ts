@@ -111,6 +111,139 @@ export const venueMyApi = {
       .then((r) => r.data as unknown as { venue: VenuePublic })
 }
 
+// ============ 赛事（商家 + 公共） ============
+
+export type TournamentStatus =
+  | 'draft'
+  | 'registering'
+  | 'registration_closed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+
+export type TournamentFormat =
+  | 'single_elim'
+  | 'double_elim'
+  | 'round_robin'
+  | 'swiss'
+
+export interface TournamentItem {
+  id: string
+  venueId: string
+  title: string
+  gameType: 'nine_ball' | 'eight_ball'
+  format: TournamentFormat
+  rulesJson: Record<string, number>
+  maxPlayers: number
+  minPlayers: number
+  entryFeeCents: number
+  prizePoolText: string | null
+  registrationStartsAt: string
+  registrationEndsAt: string
+  matchStartsAt: string
+  coverImage: string | null
+  status: TournamentStatus
+  registeredCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TournamentRegistrationItem {
+  id: string
+  tournamentId: string
+  userId: string
+  displayName: string
+  phone: string
+  seed: number | null
+  status: 'confirmed' | 'withdrawn' | 'disqualified'
+  registeredAt: string
+}
+
+export interface CreateTournamentPayload {
+  title: string
+  gameType: 'nine_ball' | 'eight_ball'
+  format: TournamentFormat
+  rules: Record<string, number>
+  maxPlayers: number
+  minPlayers: number
+  entryFeeCents?: number
+  prizePoolText?: string
+  registrationStartsAt: string
+  registrationEndsAt: string
+  matchStartsAt: string
+  coverImage?: string
+  noticeText?: string
+}
+
+export type UpdateTournamentPayload = Partial<CreateTournamentPayload>
+
+export const tournamentMerchantApi = {
+  list: (params: { status?: TournamentStatus; page?: number; pageSize?: number } = {}) =>
+    venueHttp
+      .get<{
+        items: TournamentItem[]
+        total: number
+        page: number
+        pageSize: number
+      }>('/venue/tournaments', { params })
+      .then((r) => r.data as unknown as {
+        items: TournamentItem[]
+        total: number
+        page: number
+        pageSize: number
+      }),
+
+  create: (payload: CreateTournamentPayload) =>
+    venueHttp
+      .post<{ tournament: TournamentItem }>('/venue/tournaments', payload)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  detail: (id: string) =>
+    venueHttp
+      .get<{ tournament: TournamentItem }>(`/venue/tournaments/${id}`)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  update: (id: string, patch: UpdateTournamentPayload) =>
+    venueHttp
+      .patch<{ tournament: TournamentItem }>(`/venue/tournaments/${id}`, patch)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  publish: (id: string) =>
+    venueHttp
+      .post<{ tournament: TournamentItem }>(`/venue/tournaments/${id}/publish`)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  cancel: (id: string) =>
+    venueHttp
+      .post<{ tournament: TournamentItem }>(`/venue/tournaments/${id}/cancel`)
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  closeRegistration: (id: string) =>
+    venueHttp
+      .post<{ tournament: TournamentItem }>(
+        `/venue/tournaments/${id}/close-registration`
+      )
+      .then((r) => r.data as unknown as { tournament: TournamentItem }),
+
+  registrations: (id: string, showWithdrawn = false) =>
+    venueHttp
+      .get<{ items: TournamentRegistrationItem[]; total: number }>(
+        `/venue/tournaments/${id}/registrations`,
+        { params: { showWithdrawn: showWithdrawn ? 'true' : undefined } }
+      )
+      .then((r) => r.data as unknown as {
+        items: TournamentRegistrationItem[]
+        total: number
+      }),
+
+  kick: (id: string, regId: string) =>
+    venueHttp
+      .post<{ registration: TournamentRegistrationItem }>(
+        `/venue/tournaments/${id}/registrations/${regId}/kick`
+      )
+      .then((r) => r.data)
+}
+
 export const uploadApi = {
   upload: async (
     file: File,

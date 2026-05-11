@@ -105,6 +105,15 @@ export default function Index() {
           <Text className='game-title'>发现球房</Text>
           <Text className='game-desc'>看看附近的球房，去店里打一局</Text>
         </View>
+
+        <View
+          className='game-card tournaments-card'
+          onClick={() => Taro.navigateTo({ url: '/pages/tournaments/index' })}
+        >
+          <Text className='game-icon'>🏆</Text>
+          <Text className='game-title'>赛事</Text>
+          <Text className='game-desc'>报名球房赛事，赢奖金和荣誉</Text>
+        </View>
       </View>
 
       <LoginSheet

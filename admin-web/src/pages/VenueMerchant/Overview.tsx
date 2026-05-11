@@ -130,8 +130,14 @@ export default function Overview() {
           <Button type="primary" onClick={() => navigate('/venue/profile')}>
             🎨 店铺资料
           </Button>
-          <Button disabled>🏆 赛事管理（P3 上线）</Button>
-          <Button disabled>📋 报名列表（P3 上线）</Button>
+          <Button onClick={() => navigate('/venue/tournaments')}>
+            🏆 赛事管理
+          </Button>
+          <Button
+            onClick={() => navigate('/venue/tournaments/new')}
+          >
+            ➕ 新建赛事
+          </Button>
           <Button disabled>🎮 现场控台（P5 上线）</Button>
         </Space>
       </Card>
