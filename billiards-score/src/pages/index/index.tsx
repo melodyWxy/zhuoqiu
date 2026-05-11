@@ -1,13 +1,46 @@
 import { View, Text } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useState } from 'react'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
+import { matchApi, MatchDetail } from '../../core/api/match'
 import './index.scss'
 
 export default function Index() {
   const cloudUser = useAuthStore((s) => s.user)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [activeMatch, setActiveMatch] = useState<MatchDetail | null>(null)
+
+  const refreshActive = async () => {
+    if (!cloudUser) {
+      setActiveMatch(null)
+      return
+    }
+    try {
+      const r = await matchApi.myActiveMatch()
+      setActiveMatch(r.match)
+    } catch {
+      setActiveMatch(null)
+    }
+  }
+
+  useEffect(() => {
+    refreshActive()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudUser?.id])
+
+  useDidShow(() => {
+    refreshActive()
+  })
+
+  const resumeActive = () => {
+    if (!activeMatch) return
+    const url =
+      activeMatch.type === 'nine_ball'
+        ? '/pages/nine-ball/index'
+        : '/pages/eight-ball/index'
+    Taro.navigateTo({ url: `${url}?matchId=${activeMatch.id}&role=player` })
+  }
 
   const startGame = (type: 'nine-ball' | 'eight-ball') => {
     Taro.navigateTo({ url: `/pages/config/index?type=${type}` })
@@ -28,6 +61,20 @@ export default function Index() {
         <Text className='home-title'>🎱 桌球计分</Text>
         <Text className='home-subtitle'>简单到拿起手机就会用</Text>
       </View>
+
+      {activeMatch && (
+        <View className='active-match-banner' onClick={resumeActive}>
+          <Text className='amb-icon'>🎮</Text>
+          <View className='amb-body'>
+            <Text className='amb-title'>你有进行中的比赛</Text>
+            <Text className='amb-sub'>
+              {activeMatch.type === 'nine_ball' ? '九球追分' : '中式八球'}
+              {activeMatch.code ? ` · ${activeMatch.code}` : ''} · 点击继续
+            </Text>
+          </View>
+          <Text className='amb-arrow'>→</Text>
+        </View>
+      )}
 
       <View className='game-list'>
         <View className='game-card' onClick={() => startGame('nine-ball')}>
@@ -51,7 +98,11 @@ export default function Index() {
         </View>
       </View>
 
-      <LoginSheet visible={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginSheet
+        visible={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        redirectToActiveOnSuccess
+      />
     </View>
   )
 }

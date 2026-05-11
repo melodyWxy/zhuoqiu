@@ -22,6 +22,7 @@ export default function JoinPage() {
   const [slot, setSlot] = useState<number | ''>('')
   const [loading, setLoading] = useState(false)
   const [previewing, setPreviewing] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [preview, setPreview] = useState<{
     type: string
     state: string
@@ -41,8 +42,11 @@ export default function JoinPage() {
       return
     }
     setPreviewing(true)
+    setPreviewError(null)
+    setPreview(null)
+    setSlot('')
     try {
-      const m = await matchApi.detail(c)
+      const m = await matchApi.detail(c, { toast: false })
       setPreview({
         type: m.type,
         state: m.state,
@@ -50,8 +54,15 @@ export default function JoinPage() {
           .filter((p) => p.isCurrent)
           .map((p) => ({ slot: p.slot, displayName: p.displayName, userId: p.userId }))
       })
-    } catch {
-      setPreview(null)
+    } catch (e) {
+      const err = e as { code?: number; message?: string }
+      if (err.code === 40001) {
+        setPreviewError('无此房间，请检查房间码是否正确')
+      } else if (err.code === 40002) {
+        setPreviewError('该比赛已结束')
+      } else {
+        setPreviewError(err.message ?? '查询失败，请稍后重试')
+      }
     } finally {
       setPreviewing(false)
     }
@@ -106,7 +117,7 @@ export default function JoinPage() {
           onBlur={() => code.length === 6 && handlePreview()}
         />
 
-        {!preview && (
+        {!preview && !previewError && (
           <Button
             className='preview-btn'
             onClick={handlePreview}
@@ -116,8 +127,25 @@ export default function JoinPage() {
           </Button>
         )}
 
+        {previewError && (
+          <View className='preview-error-card'>
+            <Text className='preview-error-icon'>⚠️</Text>
+            <Text className='preview-error-text'>{previewError}</Text>
+            <Button className='preview-btn' onClick={handlePreview}>
+              重新查询
+            </Button>
+          </View>
+        )}
+
         {preview && (
           <View className='preview-card'>
+            {preview.state === 'ended' && (
+              <View className='ended-banner'>
+                <Text className='ended-banner-icon'>✅</Text>
+                <Text className='ended-banner-text'>该比赛已结束</Text>
+              </View>
+            )}
+
             <View className='preview-row'>
               <Text className='preview-label'>项目</Text>
               <Text className='preview-value'>
@@ -142,7 +170,7 @@ export default function JoinPage() {
                   key={p.slot}
                   className={`preview-player ${!p.userId ? 'empty' : ''} ${slot === p.slot ? 'selected' : ''}`}
                   onClick={() => {
-                    if (!p.userId) setSlot(p.slot)
+                    if (!p.userId && preview.state !== 'ended') setSlot(p.slot)
                   }}
                 >
                   <Text className='pp-slot'>{p.slot} 号位</Text>
@@ -153,26 +181,39 @@ export default function JoinPage() {
               ))}
             </View>
 
-            <View className='join-actions'>
-              {emptySlots.length > 0 ? (
+            {preview.state !== 'ended' && (
+              <View className='join-actions'>
+                {emptySlots.length > 0 && (
+                  <Button
+                    className={`join-btn ${slot ? 'primary' : 'pending'}`}
+                    onClick={() => {
+                      if (!slot) {
+                        Taro.showToast({ title: '请先选中一个空位', icon: 'none' })
+                        return
+                      }
+                      if (loading) return
+                      handleJoin(false)
+                    }}
+                  >
+                    {loading
+                      ? '加入中…'
+                      : slot
+                        ? `占 ${slot} 号位参赛`
+                        : '👆 先选中一个空位'}
+                  </Button>
+                )}
+                {emptySlots.length === 0 && (
+                  <Text className='full-hint'>所有号位已满，可观战</Text>
+                )}
                 <Button
-                  className='join-btn primary'
-                  disabled={!slot || loading}
-                  onClick={() => handleJoin(false)}
+                  className='join-btn watch'
+                  disabled={loading}
+                  onClick={() => handleJoin(true)}
                 >
-                  {loading ? '加入中…' : `占 ${slot || '?'} 号位参赛`}
+                  👀 以观众身份进入
                 </Button>
-              ) : (
-                <Text className='full-hint'>所有号位已满</Text>
-              )}
-              <Button
-                className='join-btn'
-                disabled={loading || preview.state === 'ended'}
-                onClick={() => handleJoin(true)}
-              >
-                以观众身份进入
-              </Button>
-            </View>
+              </View>
+            )}
           </View>
         )}
       </View>

@@ -3,17 +3,20 @@ import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { authApi } from '../../core/api/auth'
 import { useAuthStore } from '../../core/auth/store'
+import { tryResumeActiveMatch } from '../../core/match/resume'
 import './index.scss'
 
 interface Props {
   visible: boolean
   onClose: () => void
   onSuccess?: () => void
+  /** 登录成功后若存在未结束的比赛，自动跳转到对战页。首页/配置页默认用 */
+  redirectToActiveOnSuccess?: boolean
 }
 
 type Step = 'menu' | 'phone_input' | 'phone_verify'
 
-export default function LoginSheet({ visible, onClose, onSuccess }: Props) {
+export default function LoginSheet({ visible, onClose, onSuccess, redirectToActiveOnSuccess }: Props) {
   const [step, setStep] = useState<Step>('menu')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -54,6 +57,7 @@ export default function LoginSheet({ visible, onClose, onSuccess }: Props) {
       reset()
       onClose()
       onSuccess?.()
+      if (redirectToActiveOnSuccess) await tryResumeActiveMatch()
     } finally {
       setLoading(false)
     }
@@ -96,6 +100,7 @@ export default function LoginSheet({ visible, onClose, onSuccess }: Props) {
       reset()
       onClose()
       onSuccess?.()
+      if (redirectToActiveOnSuccess) await tryResumeActiveMatch()
     } finally {
       setLoading(false)
     }

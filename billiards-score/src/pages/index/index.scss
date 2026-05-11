@@ -66,3 +66,48 @@
   font-size: 14px;
   color: var(--text-secondary);
 }
+
+/* 进行中的比赛横幅 */
+.active-match-banner {
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.08) 100%);
+  border: 1.5px solid var(--accent);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.amb-icon {
+  font-size: 26px;
+}
+
+.amb-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.amb-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.amb-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.amb-arrow {
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: bold;
+}

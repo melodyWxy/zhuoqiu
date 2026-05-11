@@ -14,10 +14,11 @@ type WinKind = 'normal' | 'small' | 'big' | 'golden9'
 export default function OnlineNineBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [busy, setBusy] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
-  const selfInitiatedEnd = useRef(false) // 区分"自己结束"vs"被动收到结束事件"
+  const selfInitiatedEnd = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -108,49 +109,61 @@ export default function OnlineNineBall({ matchId }: Props) {
     return others[res.tapIndex].slot
   }
 
-  const handleCardClick = async (slot: number) => {
+  // 卡片点击只做选中，不再弹 ActionSheet
+  const handleCardClick = (slot: number) => {
+    if (!iAmParticipant) {
+      Taro.showToast({ title: '观众不能操作', icon: 'none' })
+      return
+    }
+    if (!isLive) return
+    setSelectedSlot((prev) => (prev === slot ? null : slot))
+  }
+
+  const ensureSelected = (): number | null => {
     if (!iAmParticipant) {
       Taro.showToast({ title: '只有参赛者能记分', icon: 'none' })
-      return
+      return null
     }
     if (!isLive) {
       Taro.showToast({ title: '比赛已结束', icon: 'none' })
-      return
+      return null
     }
-    const res = await Taro.showActionSheet({
-      itemList: winItems.map((w) => w.label)
-    }).catch(() => null)
-    if (!res || res.tapIndex < 0) return
-    const w = winItems[res.tapIndex]
+    if (!selectedSlot) {
+      Taro.showToast({ title: '请先选择对应玩家', icon: 'none' })
+      return null
+    }
+    return selectedSlot
+  }
 
+  const doWin = async (kind: WinKind) => {
+    const s = ensureSelected()
+    if (s === null) return
     setBusy(true)
     try {
-      if (w.kind === 'big') {
-        await matchApi.event(matchId, 'score_big_jack', { winnerSlot: slot })
-      } else if (w.kind === 'golden9') {
-        await matchApi.event(matchId, 'score_golden9', { winnerSlot: slot })
+      if (kind === 'big') {
+        await matchApi.event(matchId, 'score_big_jack', { winnerSlot: s })
+      } else if (kind === 'golden9') {
+        await matchApi.event(matchId, 'score_golden9', { winnerSlot: s })
       } else {
-        const target = await pickTarget(slot)
+        const target = await pickTarget(s)
         if (target === null) return
         await matchApi.event(
           matchId,
-          w.kind === 'normal' ? 'score_normal_win' : 'score_small_jack',
-          { winnerSlot: slot, targetSlot: target }
+          kind === 'normal' ? 'score_normal_win' : 'score_small_jack',
+          { winnerSlot: s, targetSlot: target }
         )
       }
+      setSelectedSlot(null) // 操作完清空选中
       refresh()
     } finally {
       setBusy(false)
     }
   }
 
+  // 犯规：选中玩家 = 犯规者；再弹"给谁+1"
   const handleFoul = async () => {
-    if (!iAmParticipant) return
-    if (!isLive) return
-    const foulerRes = await Taro.showActionSheet({
-      itemList: players.map((p) => `${p.displayName} 犯规`)
-    }).catch(() => null)
-    if (!foulerRes || foulerRes.tapIndex < 0) return
+    const fouler = ensureSelected()
+    if (fouler === null) return
 
     const scoreToRes = await Taro.showActionSheet({
       itemList: players.map((p) => `给 ${p.displayName} +1 分`)
@@ -160,9 +173,10 @@ export default function OnlineNineBall({ matchId }: Props) {
     setBusy(true)
     try {
       await matchApi.event(matchId, 'foul', {
-        foulerSlot: players[foulerRes.tapIndex].slot,
+        foulerSlot: fouler,
         compensateSlot: players[scoreToRes.tapIndex].slot
       })
+      setSelectedSlot(null)
       refresh()
     } finally {
       setBusy(false)
@@ -216,7 +230,8 @@ export default function OnlineNineBall({ matchId }: Props) {
     } catch {
       // 即使后端失败也跳走
     }
-    Taro.switchTab({ url: '/pages/me/index' })
+    // 观众/非房主退出 → 回首页（联机入口在首页）
+    Taro.switchTab({ url: '/pages/index/index' })
   }
 
   const handleShare = () => {
@@ -269,7 +284,7 @@ export default function OnlineNineBall({ matchId }: Props) {
         {players.map((p) => (
           <View
             key={p.slot}
-            className='player-card'
+            className={`player-card ${selectedSlot === p.slot ? 'selected' : ''}`}
             onClick={() => handleCardClick(p.slot)}
           >
             <View className='avatar'>🧍</View>
@@ -298,16 +313,31 @@ export default function OnlineNineBall({ matchId }: Props) {
         <View className='actions-hint'>
           {detail.state === 'ended'
             ? '比赛已结束'
-            : iAmParticipant
-              ? '点击玩家卡片 → 记分（云端同步）'
-              : '观战中，不能记分'}
+            : !iAmParticipant
+              ? '观战中，不能记分'
+              : selectedSlot
+                ? `已选中：${players.find((p) => p.slot === selectedSlot)?.displayName ?? ''} · 点下方操作`
+                : '👆 先点玩家卡片选中，再点下方操作'}
+        </View>
+
+        <View className='win-grid'>
+          {winItems.map((w) => (
+            <Button
+              key={w.kind}
+              className={`win-btn win-${w.kind}`}
+              onClick={() => doWin(w.kind)}
+              disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
+            >
+              {w.label}
+            </Button>
+          ))}
         </View>
 
         <View className='actions-grid'>
           <Button
             className='action-btn btn-foul'
             onClick={handleFoul}
-            disabled={!iAmParticipant || !isLive || busy}
+            disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
           >
             <Text className='icon'>⚠️</Text>
             <Text>犯规</Text>

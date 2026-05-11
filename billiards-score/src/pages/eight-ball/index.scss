@@ -39,6 +39,12 @@
     border-color: var(--accent);
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
   }
+
+  &.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, var(--bg-card) 100%);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+  }
 }
 
 .avatar {

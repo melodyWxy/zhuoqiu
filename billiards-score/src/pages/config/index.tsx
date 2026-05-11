@@ -256,7 +256,7 @@ export default function ConfigPage() {
                   ? '生成房间码后朋友扫码/输码加入，实时同步'
                   : cloudUser
                     ? '点击切换到联机模式'
-                    : '登录后可开启'}
+                    : '登录后可开启联机模式'}
               </Text>
             </View>
             <View className={`online-toggle-knob ${online ? 'on' : ''}`} />

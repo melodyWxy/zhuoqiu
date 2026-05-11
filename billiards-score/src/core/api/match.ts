@@ -59,8 +59,8 @@ export const matchApi = {
       { method: 'POST', data: { code, slot, displayName } }
     ),
 
-  detail: (idOrCode: string) =>
-    callApi<MatchDetail>(`/matches/${idOrCode}`),
+  detail: (idOrCode: string, opts?: { toast?: boolean }) =>
+    callApi<MatchDetail>(`/matches/${idOrCode}`, { toast: opts?.toast ?? true }),
 
   seat: (id: string, action: 'occupy' | 'leave', slot?: number, displayName?: string) =>
     callApi<MatchDetail>(`/matches/${id}/seat`, {
@@ -99,6 +99,9 @@ export const matchApi = {
       page: number
       pageSize: number
     }>(`/me/matches?page=${page}&pageSize=${pageSize}`),
+
+  myActiveMatch: () =>
+    callApi<{ match: MatchDetail | null }>(`/me/active-match`, { toast: false }),
 
   events: (id: string) =>
     callApi<{

@@ -143,4 +143,11 @@ export class MatchController {
     const r = await this.matchService.listMyMatches(user.sub, q.page, q.pageSize)
     return paginationMeta(r.items, r.total, r.page, r.pageSize)
   }
+
+  @Get('me/active-match')
+  @UseGuards(UserAuthGuard)
+  async myActiveMatch(@CurrentUser() user: UserJwtPayload) {
+    const match = await this.matchService.findMyActiveMatch(user.sub)
+    return { match }
+  }
 }

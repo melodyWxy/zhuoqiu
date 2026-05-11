@@ -40,6 +40,12 @@
     border-color: var(--accent);
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
   }
+
+  &.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, var(--bg-card) 100%);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+  }
 }
 
 .avatar {
@@ -154,6 +160,48 @@
   margin-bottom: 12px;
   white-space: pre-line;
   line-height: 1.6;
+}
+
+.win-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.win-btn {
+  padding: 12px 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--accent);
+
+  &.win-normal {
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--success);
+    border-color: var(--success);
+  }
+  &.win-small {
+    background: rgba(212, 175, 55, 0.18);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  &.win-big {
+    background: var(--accent);
+    color: var(--primary-dark);
+    border-color: var(--accent);
+  }
+  &.win-golden9 {
+    background: linear-gradient(135deg, #f5d76e 0%, var(--accent) 100%);
+    color: var(--primary-dark);
+    border: none;
+  }
+
+  &[disabled] {
+    opacity: 0.45;
+  }
 }
 
 .actions-grid {

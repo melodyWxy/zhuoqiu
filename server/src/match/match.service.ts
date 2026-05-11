@@ -541,6 +541,26 @@ export class MatchService {
     return { items, total: items.length }
   }
 
+  async findMyActiveMatch(userId: string) {
+    const match = await this.prisma.match.findFirst({
+      where: {
+        OR: [
+          { ownerUserId: userId },
+          {
+            players: {
+              some: { userId, leftAt: null }
+            }
+          }
+        ],
+        state: { in: [MatchState.waiting, MatchState.in_progress, MatchState.paused] }
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true }
+    })
+    if (!match) return null
+    return this.detailFromTx(this.prisma, match.id)
+  }
+
   async listMyMatches(userId: string, page: number, pageSize: number) {
     const where: Prisma.MatchWhereInput = {
       OR: [

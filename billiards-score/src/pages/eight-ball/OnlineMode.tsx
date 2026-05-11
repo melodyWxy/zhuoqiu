@@ -12,6 +12,7 @@ interface Props {
 export default function OnlineEightBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [busy, setBusy] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
@@ -76,28 +77,49 @@ export default function OnlineEightBall({ matchId }: Props) {
     (currentUserId === detail.ownerUserId ||
       players.some((p) => p.userId === currentUserId))
 
-  const handleCardClick = async (slot: number) => {
+  const handleCardClick = (slot: number) => {
+    if (!iAmParticipant) {
+      Taro.showToast({ title: '观众不能操作', icon: 'none' })
+      return
+    }
+    if (!isLive) return
+    setSelectedSlot((prev) => (prev === slot ? null : slot))
+  }
+
+  const handleWin = async () => {
     if (!iAmParticipant) {
       Taro.showToast({ title: '只有参赛者能记分', icon: 'none' })
       return
     }
-    if (!isLive) return
-    const player = players.find((p) => p.slot === slot)
-    const res = await Taro.showModal({
-      title: '确认本局胜',
-      content: `${player?.displayName ?? ''} 赢下本局吗？`,
-      confirmText: '确认',
-      cancelText: '取消'
-    }).catch(() => null)
-    if (!res?.confirm) return
+    if (!isLive) {
+      Taro.showToast({ title: '比赛已结束', icon: 'none' })
+      return
+    }
+    if (!selectedSlot) {
+      Taro.showToast({ title: '请先选择本局胜者', icon: 'none' })
+      return
+    }
+    const player = players.find((p) => p.slot === selectedSlot)
     setBusy(true)
     try {
-      await matchApi.event(matchId, 'score_eight_ball_win', { winnerSlot: slot })
-      refresh()
-      const newWins = (wins[slot] ?? 0) + 1
+      await matchApi.event(matchId, 'score_eight_ball_win', { winnerSlot: selectedSlot })
+      const newWins = (wins[selectedSlot] ?? 0) + 1
       if (newWins >= targetWins) {
         Taro.showToast({ title: `${player?.displayName} 夺得比赛！`, icon: 'success' })
       }
+      setSelectedSlot(null)
+      refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleUndo = async () => {
+    if (!iAmParticipant) return
+    setBusy(true)
+    try {
+      await matchApi.undo(matchId)
+      refresh()
     } finally {
       setBusy(false)
     }
@@ -133,7 +155,8 @@ export default function OnlineEightBall({ matchId }: Props) {
     try {
       if (iAmParticipant) await matchApi.seat(matchId, 'leave')
     } catch {}
-    Taro.switchTab({ url: '/pages/me/index' })
+    // 观众/非房主退出 → 回首页
+    Taro.switchTab({ url: '/pages/index/index' })
   }
 
   const handleShare = () => {
@@ -181,7 +204,11 @@ export default function OnlineEightBall({ matchId }: Props) {
 
       <View className='players-section'>
         {players.map((p) => (
-          <View key={p.slot} className='player-card' onClick={() => handleCardClick(p.slot)}>
+          <View
+            key={p.slot}
+            className={`player-card ${selectedSlot === p.slot ? 'selected' : ''}`}
+            onClick={() => handleCardClick(p.slot)}
+          >
             <View className='avatar'>🧍</View>
             <Text className='name'>{p.displayName}</Text>
             <Text className='wins'>{wins[p.slot] ?? 0}</Text>
@@ -203,7 +230,32 @@ export default function OnlineEightBall({ matchId }: Props) {
 
       <View className='actions-section'>
         <View className='actions-hint'>
-          {iAmParticipant ? '点击玩家卡片 → 该玩家赢下本局' : '观战中，不能记分'}
+          {detail.state === 'ended'
+            ? '比赛已结束'
+            : !iAmParticipant
+              ? '观战中，不能记分'
+              : selectedSlot
+                ? `已选中：${players.find((p) => p.slot === selectedSlot)?.displayName ?? ''} · 点下方"本局胜"`
+                : '👆 先点玩家卡片选中赢家，再点下方按钮'}
+        </View>
+
+        <View className='actions-grid'>
+          <Button
+            className='action-btn btn-win'
+            onClick={handleWin}
+            disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
+          >
+            <Text className='icon'>✅</Text>
+            <Text>本局胜 +1</Text>
+          </Button>
+          <Button
+            className='action-btn btn-pass'
+            onClick={handleUndo}
+            disabled={!iAmParticipant || busy}
+          >
+            <Text className='icon'>↩️</Text>
+            <Text>撤销</Text>
+          </Button>
         </View>
       </View>
 
