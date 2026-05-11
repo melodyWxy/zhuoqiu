@@ -1,23 +1,43 @@
 import Taro from '@tarojs/taro'
 
 /**
- * API / WebSocket 地址
- * - H5：根据 window.location.hostname 推断，方便同一局域网内多机测试
- * - 小程序：后续上线换成真实域名
+ * API / WebSocket 地址推断规则（H5）：
+ *   - taro dev 端口 3000（本地开发）→ http://<host>:3001/v1（跨端口直连）
+ *   - 其他情况（生产 docker / nginx）→ 同源 /v1（nginx 反代）
+ * 小程序：上线后换真实域名
  */
-function getHost(): string {
+function isWeb(): boolean {
   try {
-    if (Taro.getEnv() === Taro.ENV_TYPE.WEB && typeof window !== 'undefined') {
-      return window.location.hostname || 'localhost'
-    }
+    return Taro.getEnv() === Taro.ENV_TYPE.WEB && typeof window !== 'undefined'
   } catch {
-    // ignore
+    return false
   }
-  return 'localhost'
 }
 
-const HOST = getHost()
-const API_PORT = 3001
+function resolveBase(): { api: string; ws: string } {
+  if (!isWeb()) {
+    return {
+      api: 'http://localhost:3001/v1',
+      ws: 'ws://localhost:3001/ws'
+    }
+  }
+  const { protocol, hostname, port } = window.location
+  const isDev = port === '3000'
+  if (isDev) {
+    return {
+      api: `http://${hostname}:3001/v1`,
+      ws: `ws://${hostname}:3001/ws`
+    }
+  }
+  // 同源：nginx 反代 /v1 和 /ws 到 server
+  const wsProto = protocol === 'https:' ? 'wss:' : 'ws:'
+  const origin = port ? `${hostname}:${port}` : hostname
+  return {
+    api: `${protocol}//${origin}/v1`,
+    ws: `${wsProto}//${origin}/ws`
+  }
+}
 
-export const API_BASE_URL = `http://${HOST}:${API_PORT}/v1`
-export const WS_BASE_URL = `ws://${HOST}:${API_PORT}/ws`
+const resolved = resolveBase()
+export const API_BASE_URL = resolved.api
+export const WS_BASE_URL = resolved.ws

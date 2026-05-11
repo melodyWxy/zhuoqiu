@@ -1,0 +1,72 @@
+name: zhuoqiu
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zhuoqiu}
+      POSTGRES_USER: ${POSTGRES_USER:-zhuoqiu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zhuoqiu_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zhuoqiu} -d ${POSTGRES_DB:-zhuoqiu}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      GLOBAL_PREFIX: v1
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zhuoqiu}:${POSTGRES_PASSWORD:-zhuoqiu_dev}@postgres:5432/${POSTGRES_DB:-zhuoqiu}?schema=public
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      DEV_FIXED_SMS_CODE: ${DEV_FIXED_SMS_CODE:-123456}
+      SEED_SUPER_ADMIN_USERNAME: ${SEED_SUPER_ADMIN_USERNAME:-admin}
+      SEED_SUPER_ADMIN_PASSWORD: ${SEED_SUPER_ADMIN_PASSWORD:-Admin@123456}
+      SEED_SUPER_ADMIN_NAME: ${SEED_SUPER_ADMIN_NAME:-超级管理员}
+      SEED_DEV_VENUE_PHONE: ${SEED_DEV_VENUE_PHONE:-13900000001}
+      UPLOAD_ROOT: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      # 内网调试用：生产可以注释掉，让流量只通过 admin / h5 的 nginx 反代
+      - "${API_PORT:-3001}:3001"
+
+  admin:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${ADMIN_PORT:-8081}:80"
+
+  h5:
+    build:
+      context: ./billiards-score
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${H5_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  uploads:

@@ -160,7 +160,7 @@ export default function UsersList() {
               dataIndex: 'lastActiveAt',
               width: 170,
               render: (v: string | null) =>
-                v ? dayjs(v).fromNow?.() ?? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'
+                v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'
             }
           ]}
         />
