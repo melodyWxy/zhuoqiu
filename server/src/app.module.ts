@@ -10,6 +10,7 @@ import { MeModule } from './me/me.module'
 import { MatchModule } from './match/match.module'
 import { AuditModule } from './audit/audit.module'
 import { RealtimeModule } from './realtime/realtime.module'
+import { VenueModule } from './venue/venue.module'
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { RealtimeModule } from './realtime/realtime.module'
     RealtimeModule,
     MatchModule,
     MeModule,
-    AdminModule
+    AdminModule,
+    VenueModule
   ]
 })
 export class AppModule {}

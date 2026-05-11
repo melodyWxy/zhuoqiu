@@ -9,10 +9,13 @@ import {
   AdminJwtPayload,
   AdminRefreshPayload,
   UserJwtPayload,
-  UserRefreshPayload
+  UserRefreshPayload,
+  VenueAccountJwtPayload,
+  VenueAccountRefreshPayload,
+  VenueClient
 } from './jwt-payload'
 import { AppConfig } from '../config/configuration'
-import { AdminAccount, AdminStatus, User } from '@prisma/client'
+import { AdminAccount, AdminStatus, User, VenueAccount, VenueAccountStatus } from '@prisma/client'
 
 const LOGIN_FAIL_THRESHOLD = 5
 const LOGIN_LOCK_MS = 15 * 60 * 1000
@@ -219,6 +222,97 @@ export class AuthService {
       secret: jwtConfig.accessSecret
     })
     if (payload.type !== 'user') {
+      throw new UnauthorizedException('token 类型不匹配')
+    }
+    return payload
+  }
+
+  // ============ 商家 venue_account token ============
+
+  issueVenueAccountTokens(
+    account: VenueAccount,
+    client: VenueClient
+  ): {
+    accessToken: string
+    refreshToken: string
+    expiresIn: number
+  } {
+    const jwtConfig = this.config.get('jwt', { infer: true })!
+    const accessPayload: VenueAccountJwtPayload = {
+      type: 'venue_account',
+      sub: account.id,
+      role: account.role,
+      venueId: account.venueId,
+      client,
+      jti: randomUUID()
+    }
+    const refreshPayload: VenueAccountRefreshPayload = {
+      type: 'venue_account_refresh',
+      sub: account.id,
+      client,
+      jti: randomUUID()
+    }
+    const accessToken = this.jwt.sign(accessPayload, {
+      secret: jwtConfig.accessSecret,
+      expiresIn: jwtConfig.accessTtl
+    })
+    const refreshToken = this.jwt.sign(refreshPayload, {
+      secret: jwtConfig.refreshSecret,
+      expiresIn: jwtConfig.refreshTtl
+    })
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: this.parseTtlToSeconds(jwtConfig.accessTtl)
+    }
+  }
+
+  async refreshVenueAccountAccessToken(refreshToken: string): Promise<{
+    accessToken: string
+    expiresIn: number
+  }> {
+    const jwtConfig = this.config.get('jwt', { infer: true })!
+    let payload: VenueAccountRefreshPayload
+    try {
+      payload = this.jwt.verify<VenueAccountRefreshPayload>(refreshToken, {
+        secret: jwtConfig.refreshSecret
+      })
+    } catch {
+      throw new UnauthorizedException('refresh token 无效或已过期')
+    }
+    if (payload.type !== 'venue_account_refresh') {
+      throw new UnauthorizedException('token 类型不匹配')
+    }
+    const account = await this.prisma.venueAccount.findUnique({
+      where: { id: payload.sub }
+    })
+    if (!account || account.status !== VenueAccountStatus.active) {
+      throw new UnauthorizedException('账号不可用')
+    }
+    const access: VenueAccountJwtPayload = {
+      type: 'venue_account',
+      sub: account.id,
+      role: account.role,
+      venueId: account.venueId,
+      client: payload.client,
+      jti: randomUUID()
+    }
+    const accessToken = this.jwt.sign(access, {
+      secret: jwtConfig.accessSecret,
+      expiresIn: jwtConfig.accessTtl
+    })
+    return {
+      accessToken,
+      expiresIn: this.parseTtlToSeconds(jwtConfig.accessTtl)
+    }
+  }
+
+  verifyVenueAccountAccessToken(token: string): VenueAccountJwtPayload {
+    const jwtConfig = this.config.get('jwt', { infer: true })!
+    const payload = this.jwt.verify<VenueAccountJwtPayload>(token, {
+      secret: jwtConfig.accessSecret
+    })
+    if (payload.type !== 'venue_account') {
       throw new UnauthorizedException('token 类型不匹配')
     }
     return payload

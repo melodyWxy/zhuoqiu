@@ -93,6 +93,7 @@ enum PhoneCodePurpose {
   login
   bind
   merge
+  venue_login
 }
 
 model PhoneVerifyCode {
@@ -266,4 +267,105 @@ model SystemSetting {
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+// ============================================================
+// 球房（商家）相关 · v2.10
+// ============================================================
+
+enum VenueAccountRole {
+  owner
+  staff
+}
+
+enum VenueAccountStatus {
+  active
+  banned
+}
+
+enum VenueStatus {
+  active
+  suspended
+}
+
+enum VenueApplicationStatus {
+  draft
+  pending
+  approved
+  rejected
+}
+
+enum VenueApplicationSource {
+  c_app
+  admin_web
+}
+
+model VenueAccount {
+  id             String              @id // va_xxxxxxxx
+  phoneNumber    String              @unique @map("phone_number") @db.VarChar(20)
+  nickname       String              @db.VarChar(32)
+  role           VenueAccountRole    @default(owner)
+  venueId        String?             @map("venue_id") // owner 可以 null（等 venue 创建后回填），staff 必填
+  status         VenueAccountStatus  @default(active)
+  lastLoginAt    DateTime?           @map("last_login_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  venue          Venue?              @relation("VenueStaff", fields: [venueId], references: [id])
+  ownedVenue     Venue?              @relation("VenueOwner")
+  applications   VenueApplication[]  @relation("VenueApplicationApplicant")
+
+  @@index([status])
+  @@map("venue_accounts")
+}
+
+model Venue {
+  id              String        @id // v_xxxxxxxx
+  name            String        @db.VarChar(128)
+  slug            String?       @unique @db.VarChar(64)
+  address         String        @db.VarChar(255)
+  lat             Float?
+  lng             Float?
+  phone           String        @db.VarChar(32)
+  coverImage      String?       @map("cover_image") @db.VarChar(512)
+  tablesCount     Int           @default(0) @map("tables_count") @db.SmallInt
+  openHoursJson   Json?         @map("open_hours_json")
+  description     String?       @db.Text
+
+  ownerAccountId  String        @unique @map("owner_account_id")
+  owner           VenueAccount  @relation("VenueOwner", fields: [ownerAccountId], references: [id])
+  staff           VenueAccount[] @relation("VenueStaff")
+
+  status          VenueStatus   @default(active)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([status])
+  @@map("venues")
+}
+
+model VenueApplication {
+  id                 String                  @id // app_xxxxxxxx
+  applicantAccountId String                  @map("applicant_account_id")
+  applicant          VenueAccount            @relation("VenueApplicationApplicant", fields: [applicantAccountId], references: [id])
+
+  source             VenueApplicationSource  @default(admin_web)
+  payloadJson        Json                    @map("payload_json")
+  licenseImage       String?                 @map("license_image") @db.VarChar(512)
+  idCardImage        String?                 @map("id_card_image") @db.VarChar(512)
+
+  status             VenueApplicationStatus  @default(draft)
+  rejectReason       String?                 @map("reject_reason") @db.Text
+  reviewedByAdminId  String?                 @map("reviewed_by_admin_id")
+  reviewedAt         DateTime?               @map("reviewed_at")
+  venueId            String?                 @map("venue_id")
+
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  @@index([applicantAccountId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("venue_applications")
 }

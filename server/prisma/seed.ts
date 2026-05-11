@@ -1,5 +1,11 @@
 import 'dotenv/config'
-import { AdminRole, AdminStatus, PrismaClient } from '@prisma/client'
+import {
+  AdminRole,
+  AdminStatus,
+  PrismaClient,
+  VenueAccountRole,
+  VenueAccountStatus
+} from '@prisma/client'
 import * as bcrypt from 'bcrypt'
 import { randomBytes } from 'crypto'
 
@@ -56,6 +62,28 @@ async function main() {
     })
   }
   console.log(`[seed] system_settings 默认值就绪（${defaults.length} 条）`)
+
+  // 开发用商家账号（v2.10）
+  const devVenuePhone = process.env.SEED_DEV_VENUE_PHONE ?? '13900000001'
+  const devVenue = await prisma.venueAccount.findUnique({
+    where: { phoneNumber: devVenuePhone }
+  })
+  if (!devVenue) {
+    const acc = await prisma.venueAccount.create({
+      data: {
+        id: genId('va'),
+        phoneNumber: devVenuePhone,
+        nickname: '开发用商家',
+        role: VenueAccountRole.owner,
+        status: VenueAccountStatus.active
+      }
+    })
+    console.log(`[seed] dev venue_account created:`)
+    console.log(`  id:    ${acc.id}`)
+    console.log(`  phone: ${acc.phoneNumber}  (用于 venue 登录测试)`)
+  } else {
+    console.log(`[seed] dev venue_account '${devVenuePhone}' 已存在，跳过`)
+  }
 }
 
 main()

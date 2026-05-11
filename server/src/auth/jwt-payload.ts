@@ -1,4 +1,6 @@
-import { AdminRole } from '@prisma/client'
+import { AdminRole, VenueAccountRole } from '@prisma/client'
+
+export type VenueClient = 'admin_web' | 'c_app'
 
 export interface AdminJwtPayload {
   type: 'admin'
@@ -17,6 +19,17 @@ export interface UserJwtPayload {
   jti?: string
 }
 
+export interface VenueAccountJwtPayload {
+  type: 'venue_account'
+  sub: string // venue account id
+  role: VenueAccountRole
+  venueId: string | null
+  client: VenueClient
+  iat?: number
+  exp?: number
+  jti?: string
+}
+
 export interface AdminRefreshPayload {
   type: 'admin_refresh'
   sub: string
@@ -28,6 +41,15 @@ export interface AdminRefreshPayload {
 export interface UserRefreshPayload {
   type: 'user_refresh'
   sub: string
+  iat?: number
+  exp?: number
+  jti?: string
+}
+
+export interface VenueAccountRefreshPayload {
+  type: 'venue_account_refresh'
+  sub: string
+  client: VenueClient
   iat?: number
   exp?: number
   jti?: string

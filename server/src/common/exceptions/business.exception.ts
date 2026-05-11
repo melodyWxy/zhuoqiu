@@ -38,6 +38,12 @@ export const ErrorCode = {
   // 管理端
   ADMIN_PERMISSION_DENIED: 50001,
 
+  // 球房 / 商家（v2.10）
+  VENUE_NOT_FOUND: 60001,
+  VENUE_APPLICATION_NOT_FOUND: 60002,
+  VENUE_APPLICATION_STATE_INVALID: 60003,
+  VENUE_ONLY_ADMIN_WEB: 60010, // 当前客户端无权执行此写操作，请到管理后台
+
   // 服务端
   INTERNAL_ERROR: 90001
 } as const
