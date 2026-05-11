@@ -6,6 +6,7 @@ import {
   type TournamentItem,
   type TournamentStatus
 } from '../../core/api/venue'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 const STATUS_LABEL: Record<TournamentStatus, { text: string; color: string }> = {
@@ -64,6 +65,8 @@ export default function TournamentsPage() {
 
   return (
     <View className='tournaments-page'>
+      <PageHeader title='赛事' />
+
       <View className='tp-tabs'>
         {(
           [

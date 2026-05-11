@@ -107,3 +107,26 @@
   font-size: 12px;
   color: var(--accent);
 }
+
+.tp-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+.tp-back {
+  font-size: 14px;
+  color: var(--accent);
+  padding: 6px 10px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  &:active { opacity: 0.7; }
+}
+
+.tp-topbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}

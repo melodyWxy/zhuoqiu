@@ -1,0 +1,52 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-page, #0d1013);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  min-height: 40px;
+}
+
+.ph-back {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:active { opacity: 0.7; }
+}
+
+.ph-back-text {
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ph-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ph-right {
+  flex-shrink: 0;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}

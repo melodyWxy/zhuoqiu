@@ -181,16 +181,23 @@ model Match {
   endedReason         String?     @map("ended_reason") @db.VarChar(255)
   eventId             String?     @map("event_id") @db.VarChar(32) // 赛事关联（批次 3 预留）
   bracketNodeId       String?     @map("bracket_node_id") @db.VarChar(64)
+
+  // v2.10 P5：与球房关联（bracket 的反向关系声明在 TournamentBracketMatch.matchId 侧）
+  venueId             String?     @map("venue_id")
+
   createdAt           DateTime    @default(now()) @map("created_at")
   updatedAt           DateTime    @updatedAt @map("updated_at")
 
-  owner   User         @relation("OwnerMatches", fields: [ownerUserId], references: [id])
-  players MatchPlayer[]
-  events  MatchEvent[]
+  owner                  User                     @relation("OwnerMatches", fields: [ownerUserId], references: [id])
+  players                MatchPlayer[]
+  events                 MatchEvent[]
+  venue                  Venue?                   @relation("MatchVenue", fields: [venueId], references: [id])
+  tournamentBracketMatch TournamentBracketMatch?  @relation("BracketToMatch")
 
   @@index([state])
   @@index([ownerUserId])
   @@index([createdAt])
+  @@index([venueId])
   @@map("matches")
 }
 
@@ -340,6 +347,8 @@ model Venue {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
+  matches         Match[]       @relation("MatchVenue")
+
   @@index([name])
   @@index([status])
   @@map("venues")
@@ -473,6 +482,7 @@ model TournamentBracketMatch {
   playerB                  TournamentRegistration? @relation("BracketPlayerB", fields: [playerBRegistrationId], references: [id])
 
   matchId                  String?             @unique @map("match_id")
+  match                    Match?              @relation("BracketToMatch", fields: [matchId], references: [id])
   winnerRegistrationId     String?             @map("winner_registration_id")
   winner                   TournamentRegistration? @relation("BracketWinner", fields: [winnerRegistrationId], references: [id])
 

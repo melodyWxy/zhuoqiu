@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../core/auth/store'
 import { venueAuthApi } from '../../core/api/venue'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 export default function VenueLoginPage() {
@@ -77,6 +78,7 @@ export default function VenueLoginPage() {
 
   return (
     <View className='venue-login-page'>
+      <PageHeader title='球房管理模式' />
       <View className='vl-header'>
         <Text className='vl-emoji'>🏢</Text>
         <Text className='vl-title'>球房管理模式</Text>

@@ -9,6 +9,7 @@ import {
   type VenueApplicationItem,
   type VenueMe
 } from '../../core/api/venue'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -160,6 +161,7 @@ export default function VenueApplyPage() {
   if (me?.venue) {
     return (
       <View className='venue-apply-page'>
+        <PageHeader title='球房入驻' />
         <View className='va-success-card'>
           <Text className='va-success-icon'>✅</Text>
           <Text className='va-success-title'>{me.venue.name}</Text>
@@ -194,6 +196,7 @@ export default function VenueApplyPage() {
     const p = app.payloadJson
     return (
       <View className='venue-apply-page'>
+        <PageHeader title='球房入驻' />
         <View className='va-status-card'>
           <Text className='va-status-icon'>🕐</Text>
           <Text className='va-status-title'>审核中…</Text>

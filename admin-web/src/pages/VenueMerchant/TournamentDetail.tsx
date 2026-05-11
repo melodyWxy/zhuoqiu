@@ -56,6 +56,7 @@ export default function TournamentDetail() {
   const [bracket, setBracket] = useState<BracketTree | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWithdrawn, setShowWithdrawn] = useState(false)
+  const [selectedBm, setSelectedBm] = useState<BracketMatchItem | null>(null)
 
   const fetchAll = async () => {
     if (!id) return
@@ -348,12 +349,163 @@ export default function TournamentDetail() {
                 tournament={t}
                 bracket={bracket}
                 loading={loading}
+                onSelect={(m) => setSelectedBm(m)}
               />
             )
           }
         ]}
       />
+
+      <BracketActionModal
+        m={selectedBm}
+        tournamentId={t.id}
+        gameType={t.gameType}
+        onClose={() => setSelectedBm(null)}
+        onDone={() => {
+          setSelectedBm(null)
+          fetchAll()
+        }}
+      />
     </div>
+  )
+}
+
+// ============ 对阵操作 Modal ============
+
+function BracketActionModal({
+  m,
+  tournamentId,
+  gameType,
+  onClose,
+  onDone
+}: {
+  m: BracketMatchItem | null
+  tournamentId: string
+  gameType: 'nine_ball' | 'eight_ball'
+  onClose: () => void
+  onDone: () => void
+}) {
+  const { message, modal } = App.useApp()
+  const [busy, setBusy] = useState(false)
+  if (!m) return null
+
+  const handleStart = async () => {
+    setBusy(true)
+    try {
+      const r = await tournamentMerchantApi.startBracketMatch(
+        tournamentId,
+        m.id
+      )
+      message.success(`对阵已开赛，房间码 ${r.code}`)
+      onDone()
+      const cUrl = `http://${window.location.hostname}:3000/#/pages/${gameType === 'nine_ball' ? 'nine-ball' : 'eight-ball'}/index?matchId=${r.matchId}&role=player`
+      window.open(cUrl, '_blank')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleWalkover = (winnerSide: 'A' | 'B') => {
+    const name =
+      winnerSide === 'A' ? m.playerA?.displayName : m.playerB?.displayName
+    modal.confirm({
+      title: '确认弃权？',
+      content: `将判 ${name} 胜（walkover），对手直接淘汰，bracket 立即推进下一轮。不可撤销。`,
+      okText: '确认',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await tournamentMerchantApi.walkover(tournamentId, m.id, winnerSide)
+        message.success('已推进')
+        onDone()
+      }
+    })
+  }
+
+  const canStart = m.status === 'ready'
+  const isInProgress = m.status === 'in_progress' && m.matchId
+  const canWalkover =
+    (m.status === 'ready' || m.status === 'pending') &&
+    (m.playerARegistrationId || m.playerBRegistrationId) &&
+    !m.matchId
+
+  return (
+    <Modal
+      open={!!m}
+      onCancel={onClose}
+      footer={null}
+      title={`对阵操作 · Round ${m.round} slot ${m.slotInRound + 1}`}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 20,
+          padding: 16,
+          background: '#181c22',
+          borderRadius: 8
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {m.playerA?.seed ? `#${m.playerA.seed}` : ''}
+          </div>
+          <div style={{ fontWeight: 600 }}>
+            {m.playerA?.displayName ?? '待定'}
+          </div>
+        </div>
+        <div style={{ alignSelf: 'center', color: '#888' }}>vs</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {m.playerB?.seed ? `#${m.playerB.seed}` : ''}
+          </div>
+          <div style={{ fontWeight: 600 }}>
+            {m.playerB?.displayName ?? '待定'}
+          </div>
+        </div>
+      </div>
+
+      {isInProgress && m.matchId && (
+        <Paragraph type="secondary" style={{ marginTop: 16 }}>
+          该对阵已开赛（matchId: <code>{m.matchId}</code>）。
+          参赛双方用各自手机登录 C 端即可记分；商家大屏可打开观战链接。
+        </Paragraph>
+      )}
+
+      <Space style={{ marginTop: 16 }} wrap>
+        {canStart && (
+          <Button type="primary" loading={busy} onClick={handleStart}>
+            🚀 开始比赛
+          </Button>
+        )}
+        {isInProgress && m.matchId && (
+          <Button
+            onClick={() =>
+              window.open(
+                `http://${window.location.hostname}:3000/#/pages/${gameType === 'nine_ball' ? 'nine-ball' : 'eight-ball'}/index?matchId=${m.matchId}&role=player`,
+                '_blank'
+              )
+            }
+          >
+            打开记分页（新窗口）
+          </Button>
+        )}
+        {canWalkover && (
+          <>
+            {m.playerARegistrationId && (
+              <Button onClick={() => handleWalkover('A')}>
+                判 {m.playerA?.displayName} 胜
+              </Button>
+            )}
+            {m.playerBRegistrationId && (
+              <Button onClick={() => handleWalkover('B')}>
+                判 {m.playerB?.displayName} 胜
+              </Button>
+            )}
+          </>
+        )}
+        <Button onClick={onClose}>取消</Button>
+      </Space>
+    </Modal>
   )
 }
 
@@ -377,11 +529,13 @@ function ROUND_NAME(round: number, total: number): string {
 function BracketView({
   tournament,
   bracket,
-  loading
+  loading,
+  onSelect
 }: {
   tournament: TournamentItem
   bracket: BracketTree | null
   loading: boolean
+  onSelect: (m: BracketMatchItem) => void
 }) {
   if (!bracket) {
     if (
@@ -413,9 +567,7 @@ function BracketView({
         <Space>
           <span>赛程树</span>
           <Tag>{bracket.rounds[0]?.matches.length ?? 0} 首轮 / {total} 轮</Tag>
-          <Tag color="default">
-            图例：● 进行 ✓ 完成 ◌ 待开 ○ 轮空
-          </Tag>
+          <Tag color="default">点对阵卡 → 开始比赛 / 判负</Tag>
         </Space>
       }
     >
@@ -436,7 +588,7 @@ function BracketView({
                 {ROUND_NAME(round, total)}（{items.length}）
               </div>
               {items.map((m) => (
-                <BracketMatchCard key={m.id} m={m} />
+                <BracketMatchCard key={m.id} m={m} onSelect={onSelect} />
               ))}
             </div>
           )
@@ -446,7 +598,13 @@ function BracketView({
   )
 }
 
-function BracketMatchCard({ m }: { m: BracketMatchItem }) {
+function BracketMatchCard({
+  m,
+  onSelect
+}: {
+  m: BracketMatchItem
+  onSelect: (m: BracketMatchItem) => void
+}) {
   const row = (
     reg: BracketPlayerRef | null,
     isWinner: boolean
@@ -477,13 +635,22 @@ function BracketMatchCard({ m }: { m: BracketMatchItem }) {
       {isWinner ? <span>✓</span> : null}
     </div>
   )
+  const clickable =
+    m.status === 'ready' ||
+    m.status === 'in_progress' ||
+    (m.status === 'pending' &&
+      (m.playerARegistrationId || m.playerBRegistrationId))
   return (
     <div
+      onClick={() => clickable && onSelect(m)}
       style={{
-        border: '1px solid #333',
+        border:
+          m.status === 'in_progress' ? '1.5px solid #60a5fa' : '1px solid #333',
         borderRadius: 6,
         padding: 6,
-        background: '#181c22'
+        background: '#181c22',
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'all 0.15s'
       }}
     >
       {row(m.playerA, m.winnerRegistrationId === m.playerARegistrationId && !!m.winnerRegistrationId)}

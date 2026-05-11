@@ -8,6 +8,7 @@ import { VenueService } from './venue.service'
 import { VenueApplicationService } from './venue-application.service'
 import { VenueAuthGuard } from './venue-auth.guard'
 import { TournamentService } from './tournament.service'
+import { BracketService } from './bracket.service'
 import { TournamentMerchantController } from './tournament-merchant.controller'
 import {
   TournamentPublicController,
@@ -29,8 +30,15 @@ import {
     VenueService,
     VenueApplicationService,
     VenueAuthGuard,
-    TournamentService
+    TournamentService,
+    BracketService
   ],
-  exports: [VenueService, VenueApplicationService, TournamentService, VenueAuthGuard]
+  exports: [
+    VenueService,
+    VenueApplicationService,
+    TournamentService,
+    BracketService,
+    VenueAuthGuard
+  ]
 })
 export class VenueModule {}

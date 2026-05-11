@@ -291,7 +291,25 @@ export const tournamentMerchantApi = {
   bracket: (id: string) =>
     venueHttp
       .get<BracketTree>(`/venue/tournaments/${id}/bracket`)
-      .then((r) => r.data as unknown as BracketTree)
+      .then((r) => r.data as unknown as BracketTree),
+
+  startBracketMatch: (id: string, bmId: string) =>
+    venueHttp
+      .post<{ matchId: string; code: string; bracketMatchId: string }>(
+        `/venue/tournaments/${id}/bracket/${bmId}/start`
+      )
+      .then((r) => r.data as unknown as {
+        matchId: string
+        code: string
+        bracketMatchId: string
+      }),
+
+  walkover: (id: string, bmId: string, winnerSide: 'A' | 'B') =>
+    venueHttp
+      .post<{ ok: boolean }>(`/venue/tournaments/${id}/bracket/${bmId}/walkover`, {
+        winnerSide
+      })
+      .then((r) => r.data)
 }
 
 export const uploadApi = {

@@ -7,6 +7,7 @@ import {
   type TournamentItem,
   type VenuePublic
 } from '../../core/api/venue'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 const DAY_LABEL: Record<string, string> = {
@@ -87,6 +88,7 @@ export default function VenueDetailPage() {
 
   return (
     <View className='venue-detail-page'>
+      <PageHeader title={venue.name} />
       <View className='vd-cover'>
         {venue.coverImage ? (
           <Image

@@ -137,3 +137,26 @@
   font-size: 11px;
   color: var(--text-secondary);
 }
+
+.vp-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 6px;
+}
+
+.vp-back {
+  font-size: 14px;
+  color: var(--accent);
+  padding: 6px 10px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  &:active { opacity: 0.7; }
+}
+
+.vp-topbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}

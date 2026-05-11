@@ -4,12 +4,23 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
 import { matchApi, MatchDetail } from '../../core/api/match'
+import {
+  tournamentsPublicApi,
+  type TournamentItem
+} from '../../core/api/venue'
 import './index.scss'
+
+function formatMd(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 export default function Index() {
   const cloudUser = useAuthStore((s) => s.user)
   const [loginOpen, setLoginOpen] = useState(false)
   const [activeMatch, setActiveMatch] = useState<MatchDetail | null>(null)
+  const [hotTournaments, setHotTournaments] = useState<TournamentItem[]>([])
 
   const refreshActive = async () => {
     if (!cloudUser) {
@@ -24,13 +35,32 @@ export default function Index() {
     }
   }
 
+  const refreshHot = async () => {
+    try {
+      const r = await tournamentsPublicApi.list({ pageSize: 10 })
+      const hot = r.items
+        .filter(
+          (t) => t.status === 'registering' || t.status === 'in_progress'
+        )
+        .slice(0, 5)
+      setHotTournaments(hot)
+    } catch {
+      setHotTournaments([])
+    }
+  }
+
   useEffect(() => {
     refreshActive()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudUser?.id])
 
+  useEffect(() => {
+    refreshHot()
+  }, [])
+
   useDidShow(() => {
     refreshActive()
+    refreshHot()
   })
 
   const resumeActive = () => {
@@ -76,45 +106,106 @@ export default function Index() {
         </View>
       )}
 
-      <View className='game-list'>
-        <View className='game-card' onClick={() => startGame('nine-ball')}>
-          <Text className='game-icon'>🎱</Text>
-          <Text className='game-title'>九球追分</Text>
-          <Text className='game-desc'>比谁得分多 · 大金·小金·普胜</Text>
+      <View className='home-grid'>
+        {/* 第一行：九球 + 中八 */}
+        <View className='grid-row'>
+          <View
+            className='mini-card primary-card'
+            onClick={() => startGame('nine-ball')}
+          >
+            <Text className='mini-icon'>🎱</Text>
+            <Text className='mini-title'>九球追分</Text>
+            <Text className='mini-desc'>大金·小金·普胜</Text>
+          </View>
+          <View
+            className='mini-card primary-card'
+            onClick={() => startGame('eight-ball')}
+          >
+            <Text className='mini-icon'>🎱</Text>
+            <Text className='mini-title'>中式八球</Text>
+            <Text className='mini-desc'>抢几局</Text>
+          </View>
         </View>
 
-        <View className='game-card' onClick={() => startGame('eight-ball')}>
-          <Text className='game-icon'>🎱</Text>
-          <Text className='game-title'>中式八球</Text>
-          <Text className='game-desc'>抢几局，记胜负</Text>
+        {/* 第二行：联机（独占） */}
+        <View className='grid-row'>
+          <View
+            className='mini-card mini-card-wide join-card'
+            onClick={goJoin}
+          >
+            <Text className='mini-icon'>🔗</Text>
+            <View className='mini-body'>
+              <Text className='mini-title'>加入联机房间</Text>
+              <Text className='mini-desc'>
+                {cloudUser ? '输入 6 位房间码或扫码' : '登录后才能加入'}
+              </Text>
+            </View>
+            <Text className='mini-arrow'>→</Text>
+          </View>
         </View>
 
-        <View className='game-card join-card' onClick={goJoin}>
-          <Text className='game-icon'>🔗</Text>
-          <Text className='game-title'>加入联机房间</Text>
-          <Text className='game-desc'>
-            {cloudUser ? '输入 6 位房间码或扫码' : '登录后才能加入'}
-          </Text>
-        </View>
-
-        <View
-          className='game-card venues-card'
-          onClick={() => Taro.navigateTo({ url: '/pages/venues/index' })}
-        >
-          <Text className='game-icon'>🏢</Text>
-          <Text className='game-title'>发现球房</Text>
-          <Text className='game-desc'>看看附近的球房，去店里打一局</Text>
-        </View>
-
-        <View
-          className='game-card tournaments-card'
-          onClick={() => Taro.navigateTo({ url: '/pages/tournaments/index' })}
-        >
-          <Text className='game-icon'>🏆</Text>
-          <Text className='game-title'>赛事</Text>
-          <Text className='game-desc'>报名球房赛事，赢奖金和荣誉</Text>
+        {/* 第三行：发现球房 + 赛事 */}
+        <View className='grid-row'>
+          <View
+            className='mini-card venues-card'
+            onClick={() => Taro.navigateTo({ url: '/pages/venues/index' })}
+          >
+            <Text className='mini-icon'>🏢</Text>
+            <Text className='mini-title'>发现球房</Text>
+            <Text className='mini-desc'>附近球房</Text>
+          </View>
+          <View
+            className='mini-card tournaments-card'
+            onClick={() => Taro.navigateTo({ url: '/pages/tournaments/index' })}
+          >
+            <Text className='mini-icon'>🏆</Text>
+            <Text className='mini-title'>赛事</Text>
+            <Text className='mini-desc'>报名 · 赢奖</Text>
+          </View>
         </View>
       </View>
+
+      {/* 热门比赛 */}
+      {hotTournaments.length > 0 && (
+        <View className='hot-section'>
+          <View className='hot-header'>
+            <Text className='hot-title'>🔥 热门比赛</Text>
+            <Text
+              className='hot-more'
+              onClick={() =>
+                Taro.navigateTo({ url: '/pages/tournaments/index' })
+              }
+            >
+              全部 →
+            </Text>
+          </View>
+          <View className='hot-list'>
+            {hotTournaments.map((t) => (
+              <View
+                key={t.id}
+                className='hot-item'
+                onClick={() =>
+                  Taro.navigateTo({
+                    url: `/pages/tournament-detail/index?id=${t.id}`
+                  })
+                }
+              >
+                <View className='hot-item-main'>
+                  <Text className='hot-item-title'>🏆 {t.title}</Text>
+                  <Text className='hot-item-meta'>
+                    {t.gameType === 'nine_ball' ? '九球' : '中八'} ·{' '}
+                    {t.registeredCount}/{t.maxPlayers} 人 ·{' '}
+                    {formatMd(t.matchStartsAt)}
+                  </Text>
+                </View>
+                <Text className={`hot-tag hot-tag-${t.status}`}>
+                  {t.status === 'registering' ? '报名中' : '进行中'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       <LoginSheet
         visible={loginOpen}

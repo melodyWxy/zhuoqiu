@@ -11,6 +11,7 @@ import {
   UseGuards
 } from '@nestjs/common'
 import { TournamentService } from './tournament.service'
+import { BracketService } from './bracket.service'
 import { VenueAuthGuard } from './venue-auth.guard'
 import { CurrentVenueAccount } from './current-venue-account.decorator'
 import { RequireClient } from './require-client.decorator'
@@ -29,7 +30,10 @@ import { BusinessException, ErrorCode } from '../common/exceptions/business.exce
 @Controller('venue/tournaments')
 @UseGuards(VenueAuthGuard)
 export class TournamentMerchantController {
-  constructor(private readonly service: TournamentService) {}
+  constructor(
+    private readonly service: TournamentService,
+    private readonly bracket: BracketService
+  ) {}
 
   @Get()
   async list(
@@ -127,8 +131,31 @@ export class TournamentMerchantController {
   }
 
   @Get(':id/bracket')
-  async bracket(@Param('id') id: string) {
+  async getBracket(@Param('id') id: string) {
     return this.service.getBracket(id)
+  }
+
+  @Post(':id/bracket/:bmId/start')
+  @RequireClient('admin_web')
+  @HttpCode(HttpStatus.OK)
+  async startBracketMatch(
+    @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
+    @Param('id') id: string,
+    @Param('bmId') bmId: string
+  ) {
+    return this.bracket.openBracketMatch(id, bmId, jwt.sub)
+  }
+
+  @Post(':id/bracket/:bmId/walkover')
+  @RequireClient('admin_web')
+  @HttpCode(HttpStatus.OK)
+  async walkover(
+    @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
+    @Param('id') id: string,
+    @Param('bmId') bmId: string,
+    @Body() body: { winnerSide: 'A' | 'B' }
+  ) {
+    return this.bracket.manualWalkover(id, bmId, jwt.sub, body.winnerSide)
   }
 
   @Get(':id/registrations')

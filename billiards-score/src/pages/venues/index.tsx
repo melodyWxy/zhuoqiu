@@ -2,6 +2,7 @@ import { View, Text, Input, Image } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { venuesPublicApi, type VenuePublic } from '../../core/api/venue'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 export default function VenuesPage() {
@@ -42,6 +43,8 @@ export default function VenuesPage() {
 
   return (
     <View className='venues-page'>
+      <PageHeader title='发现球房' />
+
       <View className='vp-search'>
         <Input
           className='vp-search-input'

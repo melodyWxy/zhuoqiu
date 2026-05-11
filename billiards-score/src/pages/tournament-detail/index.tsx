@@ -11,6 +11,7 @@ import {
 } from '../../core/api/venue'
 import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 const STATUS_LABEL: Record<string, { text: string; color: string }> = {
@@ -306,14 +307,37 @@ export default function TournamentDetailPage() {
     return (
       <View>
         {myMatch && (
-          <View className='td-card td-my-match'>
+          <View
+            className='td-card td-my-match'
+            onClick={() => {
+              if (myMatch.status === 'in_progress' && myMatch.matchId) {
+                const url =
+                  t.gameType === 'nine_ball'
+                    ? '/pages/nine-ball/index'
+                    : '/pages/eight-ball/index'
+                Taro.navigateTo({
+                  url: `${url}?matchId=${myMatch.matchId}&role=player`
+                })
+              } else if (myMatch.status === 'ready') {
+                Taro.showToast({
+                  title: '等商家在控台开赛',
+                  icon: 'none'
+                })
+              } else if (myMatch.status === 'completed') {
+                Taro.showToast({
+                  title: '该场已结束',
+                  icon: 'none'
+                })
+              }
+            }}
+          >
             <Text className='td-section'>我的对阵</Text>
             <Text className='td-my-round'>
               {roundName(myMatch.round, bracket.totalRounds)} ·{' '}
               {myMatch.status === 'ready'
                 ? '待开赛'
                 : myMatch.status === 'in_progress'
-                  ? '进行中'
+                  ? '🔵 进行中 · 点击进入记分 →'
                   : myMatch.status === 'completed'
                     ? '已结束'
                     : '待定'}
@@ -396,11 +420,19 @@ export default function TournamentDetailPage() {
 
   return (
     <View className='tournament-detail-page'>
+      <PageHeader
+        title='赛事详情'
+        right={
+          <Text
+            className='td-status'
+            style={{ color: STATUS_LABEL[status].color }}
+          >
+            {STATUS_LABEL[status].text}
+          </Text>
+        }
+      />
       <View className='td-header'>
         <Text className='td-title'>🏆 {t.title}</Text>
-        <Text className='td-status' style={{ color: STATUS_LABEL[status].color }}>
-          {STATUS_LABEL[status].text}
-        </Text>
       </View>
 
       <View className='td-tabs'>
