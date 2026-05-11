@@ -1,0 +1,164 @@
+.venue-detail-page {
+  min-height: 100vh;
+  background: var(--bg-page, #0d1013);
+  padding: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vd-empty {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-secondary);
+}
+
+.vd-cover {
+  width: 100%;
+  height: 180px;
+  background: var(--bg-card);
+  position: relative;
+  overflow: hidden;
+}
+
+.vd-cover-img {
+  width: 100%;
+  height: 180px;
+}
+
+.vd-cover-default {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+}
+
+.vd-cover-emoji {
+  font-size: 80px;
+}
+
+.vd-info-card {
+  margin: -40px 14px 0;
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vd-name-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vd-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.vd-tag {
+  background: rgba(74, 222, 128, 0.18);
+  color: var(--success);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.vd-meta-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.vd-icon {
+  flex-shrink: 0;
+}
+
+.vd-meta-text {
+  flex: 1;
+}
+
+.vd-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vd-action-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+
+  &:active { opacity: 0.85; }
+}
+
+.vd-card {
+  margin: 0 14px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vd-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.vd-hours-line {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.vd-hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vd-hours-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.vd-hours-day {
+  color: var(--text-secondary);
+}
+
+.vd-hours-val {
+  color: var(--text-primary);
+}
+
+.vd-desc {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.vd-soon {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}

@@ -79,6 +79,43 @@ export const venueAuthApi = {
   logout: () => callVenueApi('/venue-auth/logout', { method: 'POST' })
 }
 
+export interface VenuePublic {
+  id: string
+  name: string
+  slug: string | null
+  address: string
+  phone: string
+  coverImage: string | null
+  tablesCount: number
+  openHoursJson: Record<string, string> | null
+  description: string | null
+  status: string
+  createdAt: string
+}
+
+/** 公共球房发现接口，匿名可访问 */
+export const venuesPublicApi = {
+  list: (params: { keyword?: string; page?: number; pageSize?: number } = {}) => {
+    const q = new URLSearchParams()
+    if (params.keyword) q.set('keyword', params.keyword)
+    if (params.page) q.set('page', String(params.page))
+    if (params.pageSize) q.set('pageSize', String(params.pageSize))
+    const qs = q.toString()
+    return callApi<{
+      items: VenuePublic[]
+      total: number
+      page: number
+      pageSize: number
+    }>(`/venues${qs ? `?${qs}` : ''}`, { auth: false, toast: false })
+  },
+
+  detail: (id: string) =>
+    callApi<{ venue: VenuePublic }>(`/venues/${id}`, {
+      auth: false,
+      toast: false
+    })
+}
+
 export const venueApplicationApi = {
   submit: (params: {
     payload: VenueApplicationPayload

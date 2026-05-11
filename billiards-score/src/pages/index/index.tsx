@@ -96,6 +96,15 @@ export default function Index() {
             {cloudUser ? '输入 6 位房间码或扫码' : '登录后才能加入'}
           </Text>
         </View>
+
+        <View
+          className='game-card venues-card'
+          onClick={() => Taro.navigateTo({ url: '/pages/venues/index' })}
+        >
+          <Text className='game-icon'>🏢</Text>
+          <Text className='game-title'>发现球房</Text>
+          <Text className='game-desc'>看看附近的球房，去店里打一局</Text>
+        </View>
       </View>
 
       <LoginSheet

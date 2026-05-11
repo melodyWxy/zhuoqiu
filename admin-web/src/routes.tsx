@@ -13,12 +13,16 @@ import VenueApplicationDetail from './pages/Venues/ApplicationDetail'
 import VenueLogin from './pages/VenueMerchant/VenueLogin'
 import Apply from './pages/VenueMerchant/Apply'
 import ApplyStatus from './pages/VenueMerchant/ApplyStatus'
+import VenueOverview from './pages/VenueMerchant/Overview'
+import VenueProfile from './pages/VenueMerchant/Profile'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   { path: '/venue-login', element: <VenueLogin /> },
   { path: '/apply', element: <Apply /> },
   { path: '/apply/status', element: <ApplyStatus /> },
+  { path: '/venue/overview', element: <VenueOverview /> },
+  { path: '/venue/profile', element: <VenueProfile /> },
   {
     path: '/',
     element: <AppLayout />,

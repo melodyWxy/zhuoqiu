@@ -77,46 +77,10 @@ export default function ApplyStatus() {
     )
   }
 
-  // 已有 venue：展示入驻成功 + 店铺摘要（P2 会替换为真正的店铺主页）
+  // 已有 venue：直接跳店铺主页
   if (venue) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #1a1e24 0%, #13161a 100%)',
-          padding: 24
-        }}
-      >
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <Card>
-            <Result
-              status="success"
-              title="入驻完成"
-              subTitle={`欢迎，${venue.name} · 你已成功开通商家账号`}
-              extra={
-                <Space direction="vertical" align="center">
-                  <Descriptions column={1} bordered size="small">
-                    <Descriptions.Item label="球房 ID">
-                      <code>{venue.id}</code>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="地址">
-                      {venue.address}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="台桌数">
-                      {venue.tablesCount}
-                    </Descriptions.Item>
-                  </Descriptions>
-                  <Paragraph type="secondary" style={{ marginTop: 16 }}>
-                    赛事管理 / 店铺资料 / 现场控台 将于 P2-P5 阶段上线
-                  </Paragraph>
-                  <Button onClick={handleLogout}>退出登录</Button>
-                </Space>
-              }
-            />
-          </Card>
-        </div>
-      </div>
-    )
+    navigate('/venue/overview', { replace: true })
+    return null
   }
 
   // 没 venue 也没申请 → 引导去 /apply

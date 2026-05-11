@@ -80,6 +80,37 @@ export const venueApplicationApi = {
       .then((r) => r.data)
 }
 
+export interface VenuePublic {
+  id: string
+  name: string
+  slug: string | null
+  address: string
+  phone: string
+  coverImage: string | null
+  tablesCount: number
+  openHoursJson: Record<string, string> | null
+  description: string | null
+  status: string
+  createdAt: string
+}
+
+export interface UpdateVenuePayload {
+  name?: string
+  address?: string
+  phone?: string
+  coverImage?: string | null
+  tablesCount?: number
+  openHours?: Array<{ day: string; hours: string }>
+  description?: string
+}
+
+export const venueMyApi = {
+  update: (patch: UpdateVenuePayload) =>
+    venueHttp
+      .patch<{ venue: VenuePublic }>('/venue/me/venue', patch)
+      .then((r) => r.data as unknown as { venue: VenuePublic })
+}
+
 export const uploadApi = {
   upload: async (
     file: File,

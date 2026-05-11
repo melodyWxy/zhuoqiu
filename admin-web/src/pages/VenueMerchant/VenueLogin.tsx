@@ -57,10 +57,8 @@ export default function VenueLogin() {
         account: r.account
       })
       message.success('登录成功')
-      // 登录后按是否绑定 venue 跳转
       if (r.account.venueId) {
-        // v2.10 P2 才实现店铺主页，先占位到 apply 状态页
-        navigate('/apply/status', { replace: true })
+        navigate('/venue/overview', { replace: true })
       } else {
         navigate('/apply', { replace: true })
       }

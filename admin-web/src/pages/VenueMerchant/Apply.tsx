@@ -68,7 +68,7 @@ export default function Apply() {
       try {
         const r = await venueAuthApi.me()
         if (r.account?.venueId) {
-          navigate('/apply/status', { replace: true })
+          navigate('/venue/overview', { replace: true })
           return
         }
         if (r.account) {
