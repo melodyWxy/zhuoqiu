@@ -119,6 +119,7 @@ model VenueApplication {
   applicantAccountId String                @db.Uuid
   applicant         VenueAccount           @relation("VenueApplicationApplicant", fields: [applicantAccountId], references: [id])
 
+  source            String                 @default("admin_web")   // "c_app" | "admin_web"，仅分析用
   payload           Json                                           // 所有字段快照
   licenseImage      String?
   idCardImage       String?
@@ -290,20 +291,30 @@ seed.ts 新增：
 
 ## 8. 权限矩阵（要落到 NestJS Guard）
 
-| 资源 | C 端 User | VenueAccount owner | VenueAccount staff | Platform admin |
-|------|-----------|--------------------|--------------------|--------------- |
+| 资源 | C 端 User | VenueAccount@admin_web | VenueAccount@c_app (只读) | Platform admin |
+|------|-----------|------------------------|---------------------------|--------------- |
 | 读 venue（公开字段） | ✓ | ✓ | ✓ | ✓ |
-| 改 venue 资料 | ✗ | 仅自家 | ✗ | ✓ |
-| 创建 venue（审核） | 不走此路径 | 提交申请 | ✗ | 直接创建 |
+| 改 venue 资料 | ✗ | 仅自家 | ✗（返回 only_admin_web） | ✓ |
+| 提交入驻申请 | 不走此路径 | 可（若未绑定 venue） | **可**（C 端新增入口） | ✓（直建后门） |
 | 审核 venue_application | ✗ | ✗ | ✗ | ✓ |
-| 发布 tournament | ✗ | 仅自家 venue | 仅自家 venue | ✓ |
-| 报名 tournament | ✓ | ✓（自己也能参赛） | ✓ | 不建议（但可） |
-| 创建赛事 match（开赛） | ✗ | 仅自家 | 仅自家 | ✓ |
+| 发布/改 tournament | ✗ | 仅自家 venue | ✗（only_admin_web） | ✓ |
+| 报名 tournament | ✓ | ✓（自己也能参赛） | ✓（用 C 端 user session） | 不建议（但可） |
+| 创建赛事 match（开赛） | ✗ | 仅自家 | ✗ | ✓ |
 | 读 tournament 公开信息 | ✓ | ✓ | ✓ | ✓ |
+| 读自家报名者**手机号** | ✗ | ✓ | ✓ | ✓ |
+| 后门直建 venue | ✗ | ✗ | ✗ | ✓（action=create_venue_direct）|
 
 新增 JWT type：
 - 现有 `type: user | admin`
 - 新增 `type: venue_account`（payload 额外带 `accountId`, `role`, `venueId?`）
+
+**双 token 在 C 端共存**：
+- C 端 Taro 的 `auth-store.ts` 同时持有 `userSession` 和 `venueSession` 两套 token
+- 请求拦截器按 API 分发：
+  - `/v1/me/*`、`/v1/matches/*`（玩家视角） → 带 `userSession.accessToken`
+  - `/v1/venue/me/*`、`/v1/venue/tournaments/*`（商家视角） → 带 `venueSession.accessToken`
+- C 端"切换球房视角"只切 UI，不动 token
+- 商家在 C 端发起的"创建"类请求（如发赛事）会被服务端 Guard 拦：venue_account JWT 自带 `client=c_app` claim，写入接口校验 `client !== 'c_app'`，否则返回 `403 only_admin_web`，前端展示"请到管理后台"提示
 
 ---
 
