@@ -41,6 +41,14 @@ services:
       SEED_SUPER_ADMIN_NAME: ${SEED_SUPER_ADMIN_NAME:-超级管理员}
       SEED_DEV_VENUE_PHONE: ${SEED_DEV_VENUE_PHONE:-13900000001}
       UPLOAD_ROOT: /app/uploads
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      OSS_ENABLED: ${OSS_ENABLED:-false}
+      OSS_REGION: ${OSS_REGION:-}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_ROLE_ARN: ${OSS_ROLE_ARN:-}
     volumes:
       - uploads:/app/uploads
     ports:

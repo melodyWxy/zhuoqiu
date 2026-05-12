@@ -18,13 +18,39 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { AppConfig } from './config/configuration'
 
+/**
+ * CORS 来源白名单：
+ * - CORS_ORIGINS 逗号分隔（如 "https://m.x.com,https://admin.x.com"）→ 严格匹配
+ * - 留空 / "*" → 允许任意 origin（dev / 同源部署用）
+ *
+ * credentials=true 时浏览器不接受 ACAO=*，所以用动态函数回显具体 origin。
+ */
+function buildCorsConfig() {
+  const raw = process.env.CORS_ORIGINS?.trim() ?? ''
+  if (!raw || raw === '*') {
+    return { origin: true, credentials: true }
+  }
+  const allow = new Set(
+    raw.split(',').map((s) => s.trim()).filter(Boolean)
+  )
+  return {
+    origin: (
+      origin: string | undefined,
+      cb: (err: Error | null, allow?: boolean) => void
+    ) => {
+      // 同源 / curl / 服务端互调没有 origin 头，放行
+      if (!origin) return cb(null, true)
+      if (allow.has(origin)) return cb(null, true)
+      return cb(new Error(`CORS blocked: ${origin}`), false)
+    },
+    credentials: true
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
-    cors: {
-      origin: true,
-      credentials: true
-    }
+    cors: buildCorsConfig()
   })
   // 上传文件本地静态访问（MVP）
   const uploadRoot = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads')
