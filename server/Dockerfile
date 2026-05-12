@@ -6,7 +6,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install build deps for some native packages (bcrypt 等) + openssl (Prisma)
-RUN apk add --no-cache python3 make g++ libc6-compat openssl
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories \
+    && apk add --no-cache python3 make g++ libc6-compat openssl
 
 COPY package*.json ./
 COPY prisma ./prisma
@@ -27,7 +28,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-RUN apk add --no-cache tini libc6-compat openssl
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories \
+    && apk add --no-cache tini libc6-compat openssl
 
 # 保留 devDependencies：prisma CLI 和 ts-node（seed 需要）
 COPY --from=builder /app/node_modules ./node_modules
