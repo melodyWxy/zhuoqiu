@@ -9,7 +9,7 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories
     && apk add --no-cache python3 make g++ libc6-compat
 
 COPY package*.json ./
-RUN npm ci
+RUN npm config set registry https://registry.npmmirror.com && npm ci
 
 COPY . .
 # Taro h5 输出到 /app/dist（config/index.js outputRoot=dist）
