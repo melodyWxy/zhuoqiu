@@ -31,10 +31,12 @@ export default function ConfigPage() {
   const router = useRouter()
   const type = (router.params.type as GameType) || 'nine-ball'
   const userNickname = useUserStore((s) => s.nickname)
+  const cloudUser = useAuthStore((s) => s.user)
+  // 已登录 → 云端昵称（赛事/联机昵称同一个）；未登录 → 本地 userStore → '我'
+  const me = cloudUser?.nickname || userNickname || '我'
 
   const [playerCount, setPlayerCount] = useState<2 | 3>(type === 'eight-ball' ? 2 : 3)
   const [playerNames, setPlayerNames] = useState(() => {
-    const me = userNickname || '我'
     return type === 'eight-ball'
       ? [me, '对手']
       : [me, '玩家2', '玩家3']
@@ -42,7 +44,6 @@ export default function ConfigPage() {
   const [targetWins, setTargetWins] = useState(5)
   const [customWins, setCustomWins] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(true)
-  const cloudUser = useAuthStore((s) => s.user)
   // 已登录默认联机；未登录默认本地
   const [online, setOnline] = useState(!!cloudUser)
   const [creating, setCreating] = useState(false)

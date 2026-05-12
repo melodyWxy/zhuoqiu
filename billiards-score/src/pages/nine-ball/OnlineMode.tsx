@@ -1,9 +1,11 @@
-import { View, Text, Button } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { getMatchSocket, closeMatchSocket, WsMessage } from '../../core/ws/socket'
 import { useAuthStore } from '../../core/auth/store'
+import MatchHistorySheet from '../../components/MatchHistorySheet'
+import ConnectionBanner from '../../components/ConnectionBanner'
 
 interface Props {
   matchId: string
@@ -16,9 +18,15 @@ export default function OnlineNineBall({ matchId }: Props) {
   const [busy, setBusy] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
   const selfInitiatedEnd = useRef(false)
+  // selectedSlot 的 ref 镜像：避免 onClick 闭包读到陈旧值导致"选中了却说没选中"
+  const selectedSlotRef = useRef<number | null>(null)
+  useEffect(() => {
+    selectedSlotRef.current = selectedSlot
+  }, [selectedSlot])
 
   const refresh = useCallback(async () => {
     try {
@@ -128,16 +136,27 @@ export default function OnlineNineBall({ matchId }: Props) {
       Taro.showToast({ title: '比赛已结束', icon: 'none' })
       return null
     }
-    if (!selectedSlot) {
+    // 读 ref 而不是 state —— 防止 Taro H5 下 onClick 闭包在连击时读到旧 state
+    const cur = selectedSlotRef.current
+    if (cur == null) {
       Taro.showToast({ title: '请先选择对应玩家', icon: 'none' })
       return null
     }
-    return selectedSlot
+    return cur
   }
 
   const doWin = async (kind: WinKind) => {
     const s = ensureSelected()
     if (s === null) return
+    const rules = detail.rules
+    const delta =
+      kind === 'big'
+        ? rules.bigJack ?? 10
+        : kind === 'golden9'
+          ? rules.golden9 ?? 4
+          : kind === 'small'
+            ? rules.smallJack ?? 7
+            : rules.normalWin ?? 4
     setBusy(true)
     try {
       if (kind === 'big') {
@@ -153,7 +172,8 @@ export default function OnlineNineBall({ matchId }: Props) {
           { winnerSlot: s, targetSlot: target }
         )
       }
-      setSelectedSlot(null) // 操作完清空选中
+      // 成功：给用户 +N 的明确反馈，保持选中以便连击
+      Taro.showToast({ title: `+${delta}`, icon: 'success', duration: 800 })
       refresh()
     } finally {
       setBusy(false)
@@ -176,7 +196,9 @@ export default function OnlineNineBall({ matchId }: Props) {
         foulerSlot: fouler,
         compensateSlot: players[scoreToRes.tapIndex].slot
       })
-      setSelectedSlot(null)
+      Taro.showToast({ title: '已记录犯规', icon: 'none', duration: 800 })
+      // 犯规记完切选中到"被补偿方"，方便紧接着记分
+      setSelectedSlot(players[scoreToRes.tapIndex].slot)
       refresh()
     } finally {
       setBusy(false)
@@ -248,8 +270,14 @@ export default function OnlineNineBall({ matchId }: Props) {
 
   return (
     <View className='nine-ball-page'>
-      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px' }}>
-        <Text className='header-title'>九球追分 · 联机</Text>
+      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', gap: 8 }}>
+        <Text className='header-title' style={{ flex: 1 }}>九球追分 · 联机</Text>
+        <View
+          style={{ padding: '6px 12px', background: 'rgba(212,175,55,0.15)', borderRadius: 8, color: '#d4af37', fontSize: 13, fontWeight: 600 }}
+          onClick={() => setHistoryOpen(true)}
+        >
+          📜 历史
+        </View>
         {isOwner ? (
           <View
             style={{ padding: '6px 14px', background: 'rgba(239,68,68,0.15)', borderRadius: 8, color: '#ef4444', fontSize: 13, fontWeight: 600 }}
@@ -266,6 +294,8 @@ export default function OnlineNineBall({ matchId }: Props) {
           </View>
         )}
       </View>
+
+      <ConnectionBanner />
 
       {detail.code && detail.state !== 'ended' && (
         <View
@@ -315,43 +345,64 @@ export default function OnlineNineBall({ matchId }: Props) {
             ? '比赛已结束'
             : !iAmParticipant
               ? '观战中，不能记分'
-              : selectedSlot
+              : selectedSlot != null
                 ? `已选中：${players.find((p) => p.slot === selectedSlot)?.displayName ?? ''} · 点下方操作`
                 : '👆 先点玩家卡片选中，再点下方操作'}
         </View>
 
-        <View className='win-grid'>
-          {winItems.map((w) => (
-            <Button
-              key={w.kind}
-              className={`win-btn win-${w.kind}`}
-              onClick={() => doWin(w.kind)}
-              disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
-            >
-              {w.label}
-            </Button>
-          ))}
-        </View>
-
-        <View className='actions-grid'>
-          <Button
-            className='action-btn btn-foul'
-            onClick={handleFoul}
-            disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
+        <View className='ops-grid'>
+          {winItems.map((w) => {
+            const disabled =
+              !iAmParticipant || !isLive || busy || selectedSlot == null
+            return (
+              <View
+                key={w.kind}
+                className={`op-btn win-${w.kind} ${disabled ? 'is-disabled' : ''}`}
+                onClick={() => !disabled && doWin(w.kind)}
+              >
+                {w.label}
+              </View>
+            )
+          })}
+          <View
+            className={`op-btn op-foul ${
+              !iAmParticipant || !isLive || busy || selectedSlot == null
+                ? 'is-disabled'
+                : ''
+            }`}
+            onClick={() => {
+              if (!iAmParticipant || !isLive || busy || selectedSlot == null) return
+              handleFoul()
+            }}
           >
-            <Text className='icon'>⚠️</Text>
-            <Text>犯规</Text>
-          </Button>
-          <Button
-            className='action-btn btn-pass'
-            onClick={handleUndo}
-            disabled={!iAmParticipant || busy}
+            ⚠️ 犯规
+          </View>
+          <View
+            className={`op-btn op-undo ${
+              !iAmParticipant || busy ? 'is-disabled' : ''
+            }`}
+            onClick={() => {
+              if (!iAmParticipant || busy) return
+              handleUndo()
+            }}
           >
-            <Text className='icon'>↩️</Text>
-            <Text>撤销</Text>
-          </Button>
+            ↩️ 撤销
+          </View>
         </View>
       </View>
+
+      <MatchHistorySheet
+        visible={historyOpen}
+        matchId={matchId}
+        slotNames={players.reduce(
+          (acc, p) => {
+            acc[p.slot] = p.displayName
+            return acc
+          },
+          {} as Record<number, string>
+        )}
+        onClose={() => setHistoryOpen(false)}
+      />
 
       {endedOverlay && (
         <View className='ended-overlay'>

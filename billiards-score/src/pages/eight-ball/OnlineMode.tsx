@@ -1,9 +1,11 @@
-import { View, Text, Button } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { getMatchSocket, WsMessage } from '../../core/ws/socket'
 import { useAuthStore } from '../../core/auth/store'
+import MatchHistorySheet from '../../components/MatchHistorySheet'
+import ConnectionBanner from '../../components/ConnectionBanner'
 
 interface Props {
   matchId: string
@@ -14,9 +16,15 @@ export default function OnlineEightBall({ matchId }: Props) {
   const [busy, setBusy] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
   const selfInitiatedEnd = useRef(false)
+  // selectedSlot 的 ref 镜像：防止 Taro H5 下 onClick 闭包读到陈旧值
+  const selectedSlotRef = useRef<number | null>(null)
+  useEffect(() => {
+    selectedSlotRef.current = selectedSlot
+  }, [selectedSlot])
 
   const refresh = useCallback(async () => {
     try {
@@ -95,19 +103,23 @@ export default function OnlineEightBall({ matchId }: Props) {
       Taro.showToast({ title: '比赛已结束', icon: 'none' })
       return
     }
-    if (!selectedSlot) {
+    // 读 ref 而不是 state，避免 Taro H5 闭包陈旧
+    const s = selectedSlotRef.current
+    if (s == null) {
       Taro.showToast({ title: '请先选择本局胜者', icon: 'none' })
       return
     }
-    const player = players.find((p) => p.slot === selectedSlot)
+    const player = players.find((p) => p.slot === s)
     setBusy(true)
     try {
-      await matchApi.event(matchId, 'score_eight_ball_win', { winnerSlot: selectedSlot })
-      const newWins = (wins[selectedSlot] ?? 0) + 1
+      await matchApi.event(matchId, 'score_eight_ball_win', { winnerSlot: s })
+      const newWins = (wins[s] ?? 0) + 1
       if (newWins >= targetWins) {
         Taro.showToast({ title: `${player?.displayName} 夺得比赛！`, icon: 'success' })
+      } else {
+        Taro.showToast({ title: '+1', icon: 'success', duration: 800 })
       }
-      setSelectedSlot(null)
+      // 保持选中，便于连胜连击
       refresh()
     } finally {
       setBusy(false)
@@ -173,8 +185,14 @@ export default function OnlineEightBall({ matchId }: Props) {
 
   return (
     <View className='eight-ball-page'>
-      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px' }}>
-        <Text className='header-title'>中式八球 · 联机</Text>
+      <View className='header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', gap: 8 }}>
+        <Text className='header-title' style={{ flex: 1 }}>中式八球 · 联机</Text>
+        <View
+          style={{ padding: '6px 12px', background: 'rgba(212,175,55,0.15)', borderRadius: 8, color: '#d4af37', fontSize: 13, fontWeight: 600 }}
+          onClick={() => setHistoryOpen(true)}
+        >
+          📜 历史
+        </View>
         {isOwner ? (
           <View
             style={{ padding: '6px 14px', background: 'rgba(239,68,68,0.15)', borderRadius: 8, color: '#ef4444', fontSize: 13, fontWeight: 600 }}
@@ -191,6 +209,8 @@ export default function OnlineEightBall({ matchId }: Props) {
           </View>
         )}
       </View>
+
+      <ConnectionBanner />
 
       {detail.code && detail.state !== 'ended' && (
         <View className='room-code-banner' onClick={handleShare}>
@@ -234,30 +254,48 @@ export default function OnlineEightBall({ matchId }: Props) {
             ? '比赛已结束'
             : !iAmParticipant
               ? '观战中，不能记分'
-              : selectedSlot
+              : selectedSlot != null
                 ? `已选中：${players.find((p) => p.slot === selectedSlot)?.displayName ?? ''} · 点下方"本局胜"`
                 : '👆 先点玩家卡片选中赢家，再点下方按钮'}
         </View>
 
-        <View className='actions-grid'>
-          <Button
-            className='action-btn btn-win'
-            onClick={handleWin}
-            disabled={!iAmParticipant || !isLive || busy || !selectedSlot}
-          >
-            <Text className='icon'>✅</Text>
-            <Text>本局胜 +1</Text>
-          </Button>
-          <Button
-            className='action-btn btn-pass'
-            onClick={handleUndo}
-            disabled={!iAmParticipant || busy}
-          >
-            <Text className='icon'>↩️</Text>
-            <Text>撤销</Text>
-          </Button>
+        <View className='ops-grid'>
+          {(() => {
+            const winDisabled =
+              !iAmParticipant || !isLive || busy || selectedSlot == null
+            const undoDisabled = !iAmParticipant || busy
+            return (
+              <>
+                <View
+                  className={`op-btn op-win ${winDisabled ? 'is-disabled' : ''}`}
+                  onClick={() => !winDisabled && handleWin()}
+                >
+                  ✅ 本局胜 +1
+                </View>
+                <View
+                  className={`op-btn op-undo ${undoDisabled ? 'is-disabled' : ''}`}
+                  onClick={() => !undoDisabled && handleUndo()}
+                >
+                  ↩️ 撤销
+                </View>
+              </>
+            )
+          })()}
         </View>
       </View>
+
+      <MatchHistorySheet
+        visible={historyOpen}
+        matchId={matchId}
+        slotNames={players.reduce(
+          (acc, p) => {
+            acc[p.slot] = p.displayName
+            return acc
+          },
+          {} as Record<number, string>
+        )}
+        onClose={() => setHistoryOpen(false)}
+      />
 
       {endedOverlay && (
         <View className='ended-overlay'>

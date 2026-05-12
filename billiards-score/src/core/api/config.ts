@@ -15,6 +15,13 @@ function isWeb(): boolean {
 }
 
 function resolveBase(): { api: string; ws: string } {
+  // 1. 编译时注入（config/index.js defineConstants）优先；生产拆 API 域名走这里
+  const envApi = process.env.TARO_APP_API_BASE
+  const envWs = process.env.TARO_APP_WS_BASE
+  if (envApi && envWs) {
+    return { api: envApi, ws: envWs }
+  }
+
   if (!isWeb()) {
     return {
       api: 'http://localhost:3001/v1',

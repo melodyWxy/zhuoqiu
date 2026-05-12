@@ -88,7 +88,7 @@ export default function Index() {
   return (
     <View className='home-page'>
       <View className='home-header'>
-        <Text className='home-title'>🎱 桌球计分</Text>
+        <Text className='home-title'>🎱 击球帮</Text>
         <Text className='home-subtitle'>简单到拿起手机就会用</Text>
       </View>
 

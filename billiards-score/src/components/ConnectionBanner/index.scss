@@ -1,0 +1,102 @@
+.conn-banner {
+  padding: 10px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: conn-slide-in 0.2s ease-out;
+}
+
+@keyframes conn-slide-in {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.conn-text {
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* 重连中：黄底深字 + 脉冲小点 */
+.conn-reconnecting {
+  background: rgba(245, 158, 11, 0.15);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+  color: #d97706;
+}
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  background: #f59e0b;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: conn-pulse 1.2s ease-in-out infinite;
+}
+@keyframes conn-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* 恢复：绿色横条 */
+.conn-recovered {
+  background: rgba(74, 222, 128, 0.18);
+  border-bottom: 1px solid rgba(74, 222, 128, 0.35);
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* 放弃：红色卡片 + 两按钮 */
+.conn-gave-up {
+  background: rgba(239, 68, 68, 0.12);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.conn-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.conn-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.conn-sub {
+  font-size: 12px;
+  color: #f87171;
+  opacity: 0.9;
+}
+.conn-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.conn-btn {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  cursor: pointer;
+  user-select: none;
+  &:active {
+    opacity: 0.85;
+  }
+}
+.conn-btn-primary {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}

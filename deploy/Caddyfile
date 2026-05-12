@@ -1,0 +1,50 @@
+# 桌球计分 · Caddy 反向代理 + 自动 HTTPS
+#
+# - 三个子域名各自一段；Caddy 启动后自动找 Let's Encrypt 签证书 + 续期
+# - 反代目标用 docker compose 服务名（不是 127.0.0.1）：caddy 容器和 server/admin/h5 在同一 docker network
+# - 默认开 H2 + H3；admin / h5 是静态资源，server 走 WS（caddy 默认会处理 Upgrade，不用手动 ws 块）
+#
+# 部署：把本文件挂到容器 /etc/caddy/Caddyfile（compose 已配）→ docker compose up -d caddy
+# 改完后热更新：docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+{
+    # 全局：admin 邮箱用于 Let's Encrypt 续期通知（强烈建议填一个，超期会被告警）
+    # email ops@macrobit.com.cn
+
+    # 默认开严谨日志：只在 4xx/5xx 时记录
+    # log {
+    #     output stdout
+    #     format console
+    # }
+}
+
+# ---- C 端 H5 ----
+billiards-client.macrobit.com.cn {
+    encode zstd gzip
+    reverse_proxy h5:80
+}
+
+# ---- 管理后台 ----
+billiards-admin.macrobit.com.cn {
+    encode zstd gzip
+    reverse_proxy admin:80
+}
+
+# ---- 服务端 API + WebSocket ----
+billiards-server.macrobit.com.cn {
+    encode zstd gzip
+
+    # WS 走的是 ws path；caddy 自动透传 Upgrade/Connection 头，不用单独 location
+    reverse_proxy server:3009 {
+        # 长连接：WebSocket 心跳间隔 30s，留足余量
+        transport http {
+            keepalive 5m
+            keepalive_idle_conns 50
+        }
+    }
+
+    # 上传流允许大点（和 server uploads 接口的 client_max_body_size 对齐）
+    request_body {
+        max_size 20MB
+    }
+}

@@ -14,7 +14,19 @@ module.exports = {
     ['@tarojs/plugin-platform-h5'],
     ['@tarojs/plugin-framework-react']
   ],
-  defineConstants: {},
+  defineConstants: {
+    // 编译时注入；生产 build 用（推荐方式：拆 API 域名）：
+    //   TARO_APP_API_BASE=https://billiards-server.macrobit.com.cn/v1 \
+    //   TARO_APP_WS_BASE=wss://billiards-server.macrobit.com.cn/ws \
+    //   npm run build:h5
+    // 留空时回落到 src/core/api/config.ts 的 resolveBase()（同源 / dev 推断）
+    'process.env.TARO_APP_API_BASE': JSON.stringify(
+      process.env.TARO_APP_API_BASE || ''
+    ),
+    'process.env.TARO_APP_WS_BASE': JSON.stringify(
+      process.env.TARO_APP_WS_BASE || ''
+    )
+  },
   copy: {
     patterns: [],
     options: {}

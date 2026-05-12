@@ -15,7 +15,7 @@ export default defineAppConfig({
     'pages/tournament-detail/index'
   ],
   window: {
-    navigationBarTitleText: '桌球计分',
+    navigationBarTitleText: '击球帮',
     navigationBarBackgroundColor: '#1a2f23',
     navigationBarTextStyle: 'white',
     backgroundColor: '#0a0f0d'

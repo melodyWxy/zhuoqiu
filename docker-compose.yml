@@ -26,7 +26,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: 3001
+      PORT: 3009
       GLOBAL_PREFIX: v1
       DATABASE_URL: postgresql://${POSTGRES_USER:-zhuoqiu}:${POSTGRES_PASSWORD:-zhuoqiu_dev}@postgres:5432/${POSTGRES_DB:-zhuoqiu}?schema=public
       POSTGRES_HOST: postgres
@@ -41,11 +41,20 @@ services:
       SEED_SUPER_ADMIN_NAME: ${SEED_SUPER_ADMIN_NAME:-超级管理员}
       SEED_DEV_VENUE_PHONE: ${SEED_DEV_VENUE_PHONE:-13900000001}
       UPLOAD_ROOT: /app/uploads
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      OSS_ENABLED: ${OSS_ENABLED:-false}
+      OSS_REGION: ${OSS_REGION:-}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_ROLE_ARN: ${OSS_ROLE_ARN:-}
     volumes:
       - uploads:/app/uploads
-    ports:
-      # 内网调试用：生产可以注释掉，让流量只通过 admin / h5 的 nginx 反代
-      - "${API_PORT:-3001}:3001"
+    # 默认不对外暴露：流量统一走 caddy → docker network。
+    # LAN 调试需要直连 API 时取消下面注释。
+    # ports:
+    #   - "${API_PORT:-3009}:3009"
 
   admin:
     build:
@@ -54,8 +63,8 @@ services:
     restart: unless-stopped
     depends_on:
       - server
-    ports:
-      - "${ADMIN_PORT:-8081}:80"
+    # ports:
+    #   - "${ADMIN_PORT:-8081}:80"
 
   h5:
     build:
@@ -64,9 +73,28 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+    # ports:
+    #   - "${H5_PORT:-8080}:80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - server
+      - admin
+      - h5
     ports:
-      - "${H5_PORT:-8080}:80"
+      - "80:80"
+      - "443:443"
+      # HTTP/3 (QUIC) 用 UDP 443，加速握手；不要可以删
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # 自动签发的证书 + ACME 状态（必须持久化，否则每次重启都重签会被 Let's Encrypt 限流）
+      - caddy_config:/config
 
 volumes:
   pgdata:
   uploads:
+  caddy_data:
+  caddy_config:

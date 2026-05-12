@@ -428,6 +428,7 @@ function BracketActionModal({
     (m.playerARegistrationId || m.playerBRegistrationId) &&
     !m.matchId
 
+  const theme = BM_CARD_THEME[m.status] ?? BM_CARD_THEME.pending
   return (
     <Modal
       open={!!m}
@@ -441,24 +442,26 @@ function BracketActionModal({
           justifyContent: 'center',
           gap: 20,
           padding: 16,
-          background: '#181c22',
-          borderRadius: 8
+          background: theme.bg,
+          border: `1px solid ${theme.border}`,
+          borderRadius: 8,
+          color: theme.text
         }}
       >
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#888' }}>
+          <div style={{ fontSize: 12, color: theme.meta }}>
             {m.playerA?.seed ? `#${m.playerA.seed}` : ''}
           </div>
-          <div style={{ fontWeight: 600 }}>
+          <div style={{ fontWeight: 700, color: theme.text }}>
             {m.playerA?.displayName ?? '待定'}
           </div>
         </div>
-        <div style={{ alignSelf: 'center', color: '#888' }}>vs</div>
+        <div style={{ alignSelf: 'center', color: theme.meta }}>vs</div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#888' }}>
+          <div style={{ fontSize: 12, color: theme.meta }}>
             {m.playerB?.seed ? `#${m.playerB.seed}` : ''}
           </div>
-          <div style={{ fontWeight: 600 }}>
+          <div style={{ fontWeight: 700, color: theme.text }}>
             {m.playerB?.displayName ?? '待定'}
           </div>
         </div>
@@ -538,16 +541,29 @@ function BracketView({
   onSelect: (m: BracketMatchItem) => void
 }) {
   if (!bracket) {
-    if (
-      tournament.status === 'draft' ||
-      tournament.status === 'registering' ||
-      tournament.status === 'cancelled'
-    ) {
+    if (tournament.status === 'registering') {
       return (
         <Card>
           <Paragraph>
-            赛程会在"开赛"后生成。当前状态：{tournament.status}
+            当前在报名阶段，<strong>停止报名后可开启赛程</strong>。
+            赛程将在「开赛」后生成。
           </Paragraph>
+        </Card>
+      )
+    }
+    if (tournament.status === 'draft') {
+      return (
+        <Card>
+          <Paragraph>
+            赛事尚未发布。发布后进入报名阶段，停止报名后可开启赛程、生成赛程。
+          </Paragraph>
+        </Card>
+      )
+    }
+    if (tournament.status === 'cancelled') {
+      return (
+        <Card>
+          <Paragraph>赛事已取消，不会生成赛程。</Paragraph>
         </Card>
       )
     }
@@ -598,6 +614,50 @@ function BracketView({
   )
 }
 
+/**
+ * bracket 卡片配色：按状态区分。浅底 + 深字，确保 admin 默认浅主题下清晰可读。
+ */
+const BM_CARD_THEME: Record<
+  BracketMatchItem['status'],
+  { bg: string; border: string; text: string; divider: string; meta: string }
+> = {
+  pending: {
+    bg: '#fafafa',
+    border: '#d9d9d9',
+    text: '#595959',
+    divider: '#e8e8e8',
+    meta: '#8c8c8c'
+  },
+  ready: {
+    bg: '#fff7e6', // 黄：待开赛、双方齐
+    border: '#ffc069',
+    text: '#ad6800',
+    divider: '#ffe7ba',
+    meta: '#ad6800'
+  },
+  in_progress: {
+    bg: '#e6f4ff', // 蓝：进行中
+    border: '#69b1ff',
+    text: '#0958d9',
+    divider: '#bae0ff',
+    meta: '#0958d9'
+  },
+  completed: {
+    bg: '#f6ffed', // 绿：已完成
+    border: '#95de64',
+    text: '#389e0d',
+    divider: '#d9f7be',
+    meta: '#389e0d'
+  },
+  walkover: {
+    bg: '#f9f0ff', // 紫：弃权推进（BYE）
+    border: '#b37feb',
+    text: '#531dab',
+    divider: '#efdbff',
+    meta: '#531dab'
+  }
+}
+
 function BracketMatchCard({
   m,
   onSelect
@@ -605,6 +665,7 @@ function BracketMatchCard({
   m: BracketMatchItem
   onSelect: (m: BracketMatchItem) => void
 }) {
+  const theme = BM_CARD_THEME[m.status] ?? BM_CARD_THEME.pending
   const row = (
     reg: BracketPlayerRef | null,
     isWinner: boolean
@@ -615,15 +676,19 @@ function BracketMatchCard({
         justifyContent: 'space-between',
         padding: '6px 8px',
         borderRadius: 4,
-        background: isWinner ? 'rgba(74,222,128,0.08)' : 'transparent',
-        fontWeight: isWinner ? 600 : 400,
-        color: reg ? 'inherit' : '#888'
+        background: isWinner ? 'rgba(82,196,26,0.12)' : 'transparent',
+        fontWeight: isWinner ? 700 : 500,
+        color: reg ? theme.text : theme.meta
       }}
     >
       <span>
         {reg ? (
           <>
-            {reg.seed ? <Tag>#{reg.seed}</Tag> : null}
+            {reg.seed ? (
+              <Tag color='default' style={{ marginRight: 4 }}>
+                #{reg.seed}
+              </Tag>
+            ) : null}
             {reg.displayName}
           </>
         ) : m.status === 'walkover' ? (
@@ -632,37 +697,49 @@ function BracketMatchCard({
           '待定'
         )}
       </span>
-      {isWinner ? <span>✓</span> : null}
+      {isWinner ? <span style={{ color: '#389e0d' }}>✓</span> : null}
     </div>
   )
   const clickable =
     m.status === 'ready' ||
     m.status === 'in_progress' ||
+    m.status === 'completed' ||
     (m.status === 'pending' &&
       (m.playerARegistrationId || m.playerBRegistrationId))
   return (
     <div
       onClick={() => clickable && onSelect(m)}
       style={{
-        border:
-          m.status === 'in_progress' ? '1.5px solid #60a5fa' : '1px solid #333',
+        border: `${m.status === 'in_progress' ? 1.5 : 1}px solid ${theme.border}`,
         borderRadius: 6,
         padding: 6,
-        background: '#181c22',
+        background: theme.bg,
         cursor: clickable ? 'pointer' : 'default',
-        transition: 'all 0.15s'
+        transition: 'all 0.15s',
+        boxShadow:
+          m.status === 'in_progress'
+            ? '0 0 0 2px rgba(105,177,255,0.25)'
+            : 'none'
       }}
     >
-      {row(m.playerA, m.winnerRegistrationId === m.playerARegistrationId && !!m.winnerRegistrationId)}
-      <div style={{ height: 1, background: '#2a2e35', margin: '2px 0' }} />
-      {row(m.playerB, m.winnerRegistrationId === m.playerBRegistrationId && !!m.winnerRegistrationId)}
+      {row(
+        m.playerA,
+        m.winnerRegistrationId === m.playerARegistrationId &&
+          !!m.winnerRegistrationId
+      )}
+      <div style={{ height: 1, background: theme.divider, margin: '2px 0' }} />
+      {row(
+        m.playerB,
+        m.winnerRegistrationId === m.playerBRegistrationId &&
+          !!m.winnerRegistrationId
+      )}
       <div
         style={{
           marginTop: 4,
           display: 'flex',
           justifyContent: 'space-between',
           fontSize: 11,
-          color: '#888'
+          color: theme.meta
         }}
       >
         <span>slot {m.slotInRound + 1}</span>

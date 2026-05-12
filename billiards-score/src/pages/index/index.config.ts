@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '桌球计分'
+  navigationBarTitleText: '击球帮'
 })

@@ -1,8 +1,10 @@
 import {
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -20,7 +22,14 @@ import { extname, join } from 'path'
 import { mkdirSync } from 'fs'
 import { randomBytes } from 'crypto'
 import { VenueAuthGuard } from '../venue/venue-auth.guard'
+import { CurrentVenueAccount } from '../venue/current-venue-account.decorator'
+import { VenueAccountJwtPayload } from '../auth/jwt-payload'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
+import { OssStsService } from './oss-sts.service'
+
+function isOssEnabled(): boolean {
+  return (process.env.OSS_ENABLED ?? '').toLowerCase() === 'true'
+}
 
 const UPLOAD_ROOT = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads')
 
@@ -52,11 +61,37 @@ const storage = diskStorage({
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp']
 
 /**
- * MVP 本地上传。生产可切 OSS，接口 schema 保持一致。
+ * 商家上传：
+ * - OSS_ENABLED=true：前端调 GET /uploads/sts-token 拿 900s 临时凭证，直传 OSS；
+ *   POST /uploads 将拒绝（410），强制走新链路；
+ * - OSS_ENABLED=false：走 POST /uploads 本地 multipart 接收，dev 环境兜底用。
  */
 @Controller('uploads')
 @UseGuards(VenueAuthGuard)
 export class UploadController {
+  constructor(private readonly ossSts: OssStsService) {}
+
+  /**
+   * STS 直传令牌。前端拿到后：
+   *   import OSS from 'ali-oss'
+   *   const client = new OSS({ region, accessKeyId, accessKeySecret, stsToken, bucket, secure: true })
+   *   const key = `${objectKeyPrefix}/${randomId}.${ext}`
+   *   await client.put(key, file)
+   */
+  @Get('sts-token')
+  async stsToken(
+    @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
+    @Query('category') category?: string
+  ) {
+    if (!isOssEnabled()) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        'OSS 未启用（OSS_ENABLED=false），请使用本地上传接口'
+      )
+    }
+    return this.ossSts.issueUploadToken(category ?? 'general', jwt.sub)
+  }
+
   @Post()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
@@ -82,6 +117,12 @@ export class UploadController {
     @UploadedFile() file: MulterFile | undefined,
     @Req() req: Request
   ) {
+    if (isOssEnabled()) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        'OSS 已启用，请改用 /uploads/sts-token 走客户端直传'
+      )
+    }
     if (!file) {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '未收到文件')
     }

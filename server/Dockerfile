@@ -39,7 +39,7 @@ COPY --from=builder /app/tsconfig.json ./tsconfig.json
 # 上传目录挂卷时会被覆盖，但创建目录防止启动报错
 RUN mkdir -p /app/uploads
 
-EXPOSE 3001
+EXPOSE 3009
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
