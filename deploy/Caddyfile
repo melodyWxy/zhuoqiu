@@ -35,7 +35,7 @@ billiards-server.macrobit.com.cn {
     encode zstd gzip
 
     # WS 走的是 ws path；caddy 自动透传 Upgrade/Connection 头，不用单独 location
-    reverse_proxy server:3001 {
+    reverse_proxy server:3009 {
         # 长连接：WebSocket 心跳间隔 30s，留足余量
         transport http {
             keepalive 5m
