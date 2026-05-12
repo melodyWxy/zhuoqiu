@@ -51,9 +51,10 @@ services:
       OSS_ROLE_ARN: ${OSS_ROLE_ARN:-}
     volumes:
       - uploads:/app/uploads
-    ports:
-      # 内网调试用：生产可以注释掉，让流量只通过 admin / h5 的 nginx 反代
-      - "${API_PORT:-3001}:3001"
+    # 默认不对外暴露：流量统一走 caddy → docker network。
+    # LAN 调试需要直连 API 时取消下面注释。
+    # ports:
+    #   - "${API_PORT:-3001}:3001"
 
   admin:
     build:
@@ -62,8 +63,8 @@ services:
     restart: unless-stopped
     depends_on:
       - server
-    ports:
-      - "${ADMIN_PORT:-8081}:80"
+    # ports:
+    #   - "${ADMIN_PORT:-8081}:80"
 
   h5:
     build:
@@ -72,9 +73,28 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+    # ports:
+    #   - "${H5_PORT:-8080}:80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - server
+      - admin
+      - h5
     ports:
-      - "${H5_PORT:-8080}:80"
+      - "80:80"
+      - "443:443"
+      # HTTP/3 (QUIC) 用 UDP 443，加速握手；不要可以删
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # 自动签发的证书 + ACME 状态（必须持久化，否则每次重启都重签会被 Let's Encrypt 限流）
+      - caddy_config:/config
 
 volumes:
   pgdata:
   uploads:
+  caddy_data:
+  caddy_config:
