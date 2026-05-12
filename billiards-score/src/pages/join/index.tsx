@@ -5,6 +5,7 @@ import { matchApi } from '../../core/api/match'
 import { useAuthStore } from '../../core/auth/store'
 import { useGameTimer } from '../../core/game/timer'
 import LoginSheet from '../../components/LoginSheet'
+import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
 export default function JoinPage() {
@@ -102,8 +103,8 @@ export default function JoinPage() {
 
   return (
     <View className='join-page'>
+      <PageHeader title='加入联机比赛' />
       <View className='join-header'>
-        <Text className='join-title'>加入联机比赛</Text>
         <Text className='join-subtitle'>输入 6 位房间码</Text>
       </View>
 

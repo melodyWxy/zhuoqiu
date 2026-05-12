@@ -37,6 +37,15 @@ export interface CreateMatchInput {
   playerSlots: Array<{ slot: number; name: string; claim: boolean }>
 }
 
+/** 11 位大陆手机号 → 138****0001；非 11 位（或 null）原样/返回 null */
+function maskPhone(phone: string | null): string | null {
+  if (!phone) return null
+  if (/^\d{11}$/.test(phone)) {
+    return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+  }
+  return phone
+}
+
 @Injectable()
 export class MatchService {
   private readonly logger = new Logger(MatchService.name)
@@ -600,11 +609,37 @@ export class MatchService {
     if (!match) {
       throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
     }
-    const items = await this.prisma.matchEvent.findMany({
+    // serverSeq desc：最新操作在最上，便于裁判快速追溯
+    const rows = await this.prisma.matchEvent.findMany({
       where: { matchId },
-      orderBy: { serverSeq: 'asc' },
-      take: 500
+      orderBy: { serverSeq: 'desc' },
+      take: 500,
+      include: {
+        author: { select: { id: true, nickname: true, phoneNumber: true } }
+      }
     })
+    // 管理员操作单独标注（比如 force_end / score_correct）。
+    const adminIds = Array.from(
+      new Set(rows.map((r) => r.actorAdminId).filter(Boolean) as string[])
+    )
+    const admins = adminIds.length
+      ? await this.prisma.adminAccount.findMany({
+          where: { id: { in: adminIds } },
+          select: { id: true, name: true, username: true }
+        })
+      : []
+    const adminById = new Map(
+      admins.map((a) => [a.id, a.name || a.username])
+    )
+    const items = rows.map((r) => ({
+      ...r,
+      actorNickname: r.author?.nickname ?? null,
+      actorPhoneMasked: maskPhone(r.author?.phoneNumber ?? null),
+      actorAdminName: r.actorAdminId
+        ? adminById.get(r.actorAdminId) ?? null
+        : null,
+      author: undefined // 不把 relation + 原始手机号抛给前端
+    }))
     return { items, total: items.length }
   }
 

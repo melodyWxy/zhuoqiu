@@ -162,21 +162,32 @@
   line-height: 1.6;
 }
 
-.win-grid {
+/* 统一 6 个操作按钮（4 赢球 + 犯规 + 撤销）：3×2 grid 等宽等高 */
+.ops-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
-.win-btn {
-  padding: 12px 8px;
+.op-btn {
+  height: 52px;
+  line-height: 1.2;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  border: 1px solid var(--accent);
-  background: rgba(212, 175, 55, 0.12);
-  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s, opacity 0.15s;
+
+  &:active { transform: scale(0.97); }
+  &.is-disabled { opacity: 0.4; cursor: not-allowed; }
 
   &.win-normal {
     background: rgba(74, 222, 128, 0.15);
@@ -196,34 +207,17 @@
   &.win-golden9 {
     background: linear-gradient(135deg, #f5d76e 0%, var(--accent) 100%);
     color: var(--primary-dark);
-    border: none;
+    border-color: transparent;
   }
-
-  &[disabled] {
-    opacity: 0.45;
+  &.op-foul {
+    background: rgba(239, 68, 68, 0.18);
+    color: var(--error);
+    border-color: var(--error);
   }
-}
-
-.actions-grid {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 14px 8px;
-  border-radius: 10px;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-
-  .icon {
-    font-size: 20px;
+  &.op-undo {
+    background: rgba(96, 165, 250, 0.18);
+    color: var(--info);
+    border-color: var(--info);
   }
 }
 

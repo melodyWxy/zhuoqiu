@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import { TournamentService } from './tournament.service'
 import { BracketService } from './bracket.service'
+import { VenueService } from './venue.service'
 import { VenueAuthGuard } from './venue-auth.guard'
 import { CurrentVenueAccount } from './current-venue-account.decorator'
 import { RequireClient } from './require-client.decorator'
@@ -32,21 +33,33 @@ import { BusinessException, ErrorCode } from '../common/exceptions/business.exce
 export class TournamentMerchantController {
   constructor(
     private readonly service: TournamentService,
-    private readonly bracket: BracketService
+    private readonly bracket: BracketService,
+    private readonly venue: VenueService
   ) {}
+
+  /**
+   * JWT 签发时刻商家可能未绑定 venue（申请中）；审核通过后 DB 已更新但 token
+   * 里的 venueId 还是旧值。所以不信任 jwt.venueId，每次从 DB 读最新。
+   */
+  private async resolveVenueId(jwt: VenueAccountJwtPayload): Promise<string> {
+    if (jwt.venueId) return jwt.venueId
+    const acc = await this.venue.getAccountById(jwt.sub)
+    if (!acc?.venueId) {
+      throw new BusinessException(
+        ErrorCode.VENUE_NOT_FOUND,
+        '你还没有绑定球房，请先完成入驻申请'
+      )
+    }
+    return acc.venueId
+  }
 
   @Get()
   async list(
     @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
     @Query() q: TournamentListQueryDto
   ) {
-    if (!jwt.venueId) {
-      throw new BusinessException(
-        ErrorCode.VENUE_NOT_FOUND,
-        '你还没有绑定球房'
-      )
-    }
-    return this.service.listOwn(jwt.sub, jwt.venueId, q)
+    const venueId = await this.resolveVenueId(jwt)
+    return this.service.listOwn(jwt.sub, venueId, q)
   }
 
   @Post()
@@ -56,13 +69,8 @@ export class TournamentMerchantController {
     @CurrentVenueAccount() jwt: VenueAccountJwtPayload,
     @Body() dto: CreateTournamentDto
   ) {
-    if (!jwt.venueId) {
-      throw new BusinessException(
-        ErrorCode.VENUE_NOT_FOUND,
-        '请先完成入驻'
-      )
-    }
-    const t = await this.service.createDraft(jwt.sub, jwt.venueId, dto)
+    const venueId = await this.resolveVenueId(jwt)
+    const t = await this.service.createDraft(jwt.sub, venueId, dto)
     return { tournament: t }
   }
 

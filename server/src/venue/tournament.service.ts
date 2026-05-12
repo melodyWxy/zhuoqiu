@@ -353,7 +353,7 @@ export class TournamentService {
         '赛事不存在'
       )
     }
-    const items = await this.prisma.tournamentBracketMatch.findMany({
+    const raw = await this.prisma.tournamentBracketMatch.findMany({
       where: { tournamentId },
       orderBy: [{ round: 'asc' }, { slotInRound: 'asc' }],
       include: {
@@ -362,6 +362,26 @@ export class TournamentService {
         winner: { select: { id: true, displayName: true, seed: true, userId: true } }
       }
     })
+    // 用 userId 批量取 user.nickname 覆盖 displayName
+    const userIds: string[] = []
+    for (const it of raw) {
+      if (it.playerA) userIds.push(it.playerA.userId)
+      if (it.playerB) userIds.push(it.playerB.userId)
+      if (it.winner) userIds.push(it.winner.userId)
+    }
+    const nickById = await this.nicknameByUserIds(userIds)
+    const withNick = <P extends { userId: string; displayName: string } | null>(
+      p: P
+    ): P =>
+      (p
+        ? { ...p, displayName: nickById.get(p.userId) || p.displayName }
+        : p) as P
+    const items = raw.map((it) => ({
+      ...it,
+      playerA: withNick(it.playerA),
+      playerB: withNick(it.playerB),
+      winner: withNick(it.winner)
+    }))
     // 分组为 round → slots
     const rounds: Record<number, typeof items> = {}
     for (const it of items) {
@@ -667,15 +687,30 @@ export class TournamentService {
     if (!showWithdrawn) {
       where.status = TournamentRegistrationStatus.confirmed
     }
-    const items = await this.prisma.tournamentRegistration.findMany({
+    const rows = await this.prisma.tournamentRegistration.findMany({
       where,
       orderBy: { registeredAt: 'asc' }
     })
+    // 把 displayName 替换成用户最新 nickname（TournamentRegistration 没声明 user relation）
+    const nickById = await this.nicknameByUserIds(rows.map((r) => r.userId))
+    const items = rows.map((r) => ({
+      ...r,
+      displayName: nickById.get(r.userId) || r.displayName
+    }))
     return { items, total: items.length }
   }
 
+  private async nicknameByUserIds(ids: string[]): Promise<Map<string, string>> {
+    if (!ids.length) return new Map()
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, nickname: true }
+    })
+    return new Map(users.map((u) => [u.id, u.nickname]))
+  }
+
   async registrationsPublic(tournamentId: string) {
-    const items = await this.prisma.tournamentRegistration.findMany({
+    const rows = await this.prisma.tournamentRegistration.findMany({
       where: {
         tournamentId,
         status: TournamentRegistrationStatus.confirmed
@@ -683,11 +718,28 @@ export class TournamentService {
       orderBy: { registeredAt: 'asc' },
       select: {
         id: true,
+        userId: true,
         displayName: true,
         registeredAt: true,
         seed: true
       }
     })
+    // TournamentRegistration 没声明 user relation；批量 user.findMany 映射 nickname。
+    // C 端公共报名列表：展示名以用户最新 nickname 为准，兜底才用 registration.displayName。
+    const userIds = rows.map((r) => r.userId)
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, nickname: true }
+        })
+      : []
+    const nickById = new Map(users.map((u) => [u.id, u.nickname]))
+    const items = rows.map((r) => ({
+      id: r.id,
+      displayName: nickById.get(r.userId) || r.displayName,
+      registeredAt: r.registeredAt,
+      seed: r.seed
+    }))
     return { items, total: items.length }
   }
 

@@ -1,9 +1,23 @@
 import {
+  DEFAULT_NINE_BALL_RULES,
   MatchEventPayload,
   NineBallComputedState,
   NineBallRules,
   PlayerSlotState
 } from './types'
+
+// 历史数据 / 赛事链路里 rulesJson 可能缺字段；把 undefined 回落到 default，
+// 避免 `0 + undefined = NaN` 然后 JSON 序列化成 null。
+function normalizeRulesRuntime(rules: Partial<NineBallRules>): NineBallRules {
+  return {
+    normalWin: rules.normalWin ?? DEFAULT_NINE_BALL_RULES.normalWin,
+    smallJack: rules.smallJack ?? DEFAULT_NINE_BALL_RULES.smallJack,
+    bigJack: rules.bigJack ?? DEFAULT_NINE_BALL_RULES.bigJack,
+    golden9: rules.golden9 ?? DEFAULT_NINE_BALL_RULES.golden9,
+    foulCompensation:
+      rules.foulCompensation ?? DEFAULT_NINE_BALL_RULES.foulCompensation
+  }
+}
 
 export function emptyNineBallState(slots: number[]): NineBallComputedState {
   const scores: Record<number, number> = {}
@@ -21,9 +35,10 @@ export function emptyNineBallState(slots: number[]): NineBallComputedState {
 export function applyNineBallEvent(
   state: NineBallComputedState,
   event: MatchEventPayload,
-  rules: NineBallRules,
+  rulesInput: Partial<NineBallRules>,
   players: PlayerSlotState[]
 ): NineBallComputedState {
+  const rules = normalizeRulesRuntime(rulesInput)
   const next = clone(state)
   const playerSlots = players.map((p) => p.slot)
 

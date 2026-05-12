@@ -10,6 +10,31 @@ import { PrismaService } from '../prisma/prisma.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
 import { genId, genMatchCode } from '../common/utils/id'
 import { resolveAfterMatchEnd } from './bracket-resolve'
+import { DEFAULT_NINE_BALL_RULES } from '../match/state-machine/types'
+
+/**
+ * 把 tournament.rulesJson（通常只装 raceToWins 等"赛事级"字段）
+ * 合并 match 端必须的记分细则默认值（normalWin/bigJack 等），
+ * 防止 state-machine 读到 undefined 把 scores 算成 NaN → JSON 序列化成 null。
+ */
+function mergeRulesForMatch(
+  type: MatchType,
+  tournamentRules: Record<string, unknown>
+): Record<string, number> {
+  const tr = (tournamentRules ?? {}) as Record<string, number>
+  if (type === MatchType.nine_ball) {
+    return {
+      normalWin: tr.normalWin ?? DEFAULT_NINE_BALL_RULES.normalWin,
+      smallJack: tr.smallJack ?? DEFAULT_NINE_BALL_RULES.smallJack,
+      bigJack: tr.bigJack ?? DEFAULT_NINE_BALL_RULES.bigJack,
+      golden9: tr.golden9 ?? DEFAULT_NINE_BALL_RULES.golden9,
+      foulCompensation:
+        tr.foulCompensation ?? DEFAULT_NINE_BALL_RULES.foulCompensation,
+      ...tr // 保留 raceToWins 等其他字段
+    }
+  }
+  return { targetWins: tr.targetWins ?? 5, ...tr }
+}
 
 @Injectable()
 export class BracketService {
@@ -86,13 +111,17 @@ export class BracketService {
       }
 
       const matchId = genId('m')
+      const mergedRules = mergeRulesForMatch(
+        t.gameType,
+        (t.rulesJson ?? {}) as Record<string, unknown>
+      )
       await tx.match.create({
         data: {
           id: matchId,
           code,
           ownerUserId: bm.playerA.userId, // playerA 当 owner
           type: t.gameType,
-          rulesJson: t.rulesJson as unknown as Prisma.InputJsonValue,
+          rulesJson: mergedRules as unknown as Prisma.InputJsonValue,
           state: MatchState.in_progress,
           timerStartedAt: new Date(),
           venueId: t.venueId

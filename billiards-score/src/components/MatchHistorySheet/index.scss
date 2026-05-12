@@ -1,0 +1,146 @@
+.mhs-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.mhs-box {
+  width: 100%;
+  max-width: 520px;
+  height: 72vh;
+  background: #1a2f23;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mhs-head {
+  position: relative;
+  padding: 16px 20px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mhs-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #d4af37;
+}
+
+.mhs-hint {
+  display: block;
+  font-size: 11px;
+  color: #a0a8a4;
+  margin-top: 2px;
+}
+
+.mhs-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: #d4af37;
+  cursor: pointer;
+  &:active { opacity: 0.8; }
+}
+
+.mhs-list {
+  flex: 1;
+  padding: 4px 12px 16px;
+}
+
+.mhs-empty {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  color: #a0a8a4;
+  padding: 40px 0;
+}
+
+.mhs-row {
+  display: flex;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+
+  &.is-undone {
+    opacity: 0.55;
+    .mhs-desc { text-decoration: line-through; }
+  }
+}
+
+.mhs-row-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.mhs-seq {
+  color: #d4af37;
+  font-weight: 600;
+  font-size: 11px;
+  font-family: 'SF Mono', Menlo, monospace;
+}
+
+.mhs-time {
+  color: #a0a8a4;
+  font-size: 11px;
+  font-family: 'SF Mono', Menlo, monospace;
+  margin-top: 2px;
+}
+
+.mhs-row-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mhs-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mhs-actor {
+  font-size: 11px;
+  color: #d4af37;
+  font-weight: 600;
+  &.is-admin {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+}
+
+.mhs-desc {
+  color: #fff;
+  line-height: 1.4;
+  word-break: break-all;
+  font-size: 13px;
+}
+
+.mhs-undone-tag {
+  font-size: 10px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}

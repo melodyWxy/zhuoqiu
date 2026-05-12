@@ -312,18 +312,77 @@ export const tournamentMerchantApi = {
       .then((r) => r.data)
 }
 
+interface StsToken {
+  region: string
+  bucket: string
+  endpoint: string | null
+  accessKeyId: string
+  accessKeySecret: string
+  securityToken: string
+  expiration: string
+  objectKeyPrefix: string
+  expiresInSec: number
+}
+
+// STS 有效期 900s，缓存到还剩 60s 前，避免每次都来一次 AssumeRole
+let cachedToken: (StsToken & { category: string; expireAt: number }) | null = null
+
+async function getStsToken(category: string): Promise<StsToken> {
+  const now = Date.now()
+  if (
+    cachedToken &&
+    cachedToken.category === category &&
+    cachedToken.expireAt - now > 60_000
+  ) {
+    return cachedToken
+  }
+  const r = await venueHttp.get<StsToken>(
+    `/uploads/sts-token?category=${encodeURIComponent(category)}`
+  )
+  const tok = r.data as unknown as StsToken
+  cachedToken = {
+    ...tok,
+    category,
+    expireAt: new Date(tok.expiration).getTime()
+  }
+  return tok
+}
+
+function ext(filename: string): string {
+  const i = filename.lastIndexOf('.')
+  return i >= 0 ? filename.slice(i).toLowerCase() : ''
+}
+
+function randomId(len = 16): string {
+  const arr = new Uint8Array(len)
+  crypto.getRandomValues(arr)
+  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 export const uploadApi = {
+  /**
+   * STS 直传阿里云 OSS：
+   *   1) GET /uploads/sts-token 拿 900s 临时凭证
+   *   2) 用 ali-oss JS SDK put 到 `{prefix}/{randomId}{ext}`
+   *   3) 返回最终公网 URL 给业务用
+   */
   upload: async (
     file: File,
     category: string
   ): Promise<{ url: string; path: string }> => {
-    const fd = new FormData()
-    fd.append('file', file)
-    const r = await venueHttp.post<{ url: string; path: string }>(
-      `/uploads?category=${encodeURIComponent(category)}`,
-      fd,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    )
-    return r.data as unknown as { url: string; path: string }
+    const tok = await getStsToken(category)
+    const OSS = (await import('ali-oss')).default
+    const client = new OSS({
+      region: tok.region,
+      accessKeyId: tok.accessKeyId,
+      accessKeySecret: tok.accessKeySecret,
+      stsToken: tok.securityToken,
+      bucket: tok.bucket,
+      endpoint: tok.endpoint ?? undefined,
+      secure: true
+    })
+    const objectKey = `${tok.objectKeyPrefix}/${randomId()}${ext(file.name)}`
+    const res = await client.put(objectKey, file)
+    return { url: res.url, path: objectKey }
   }
 }

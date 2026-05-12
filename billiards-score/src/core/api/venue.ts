@@ -290,29 +290,91 @@ export const venueApplicationApi = {
     )
 }
 
+interface StsToken {
+  region: string
+  bucket: string
+  endpoint: string | null
+  accessKeyId: string
+  accessKeySecret: string
+  securityToken: string
+  expiration: string
+  objectKeyPrefix: string
+  expiresInSec: number
+}
+
+let cachedToken: (StsToken & { category: string; expireAt: number }) | null = null
+
+async function fetchStsToken(category: string, accessToken: string): Promise<StsToken> {
+  const now = Date.now()
+  if (
+    cachedToken &&
+    cachedToken.category === category &&
+    cachedToken.expireAt - now > 60_000
+  ) {
+    return cachedToken
+  }
+  const r = await Taro.request<{ code: number; data?: StsToken; message?: string }>({
+    url: `${API_BASE_URL}/uploads/sts-token?category=${encodeURIComponent(category)}`,
+    method: 'GET',
+    header: { Authorization: `Bearer ${accessToken}` }
+  })
+  if (r.statusCode !== 200 || r.data.code !== 0 || !r.data.data) {
+    throw new Error(r.data.message ?? '获取上传凭证失败')
+  }
+  const tok = r.data.data
+  cachedToken = {
+    ...tok,
+    category,
+    expireAt: new Date(tok.expiration).getTime()
+  }
+  return tok
+}
+
+function extOfPath(path: string): string {
+  const slashed = path.split('?')[0]
+  const i = slashed.lastIndexOf('.')
+  return i >= 0 ? slashed.slice(i).toLowerCase() : ''
+}
+
+function randomHex(len = 16): string {
+  const arr = new Uint8Array(len)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(arr)
+  } else {
+    for (let i = 0; i < len; i++) arr[i] = Math.floor(Math.random() * 256)
+  }
+  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 /**
- * 文件上传：Taro 的 request 不方便发 multipart，用 uploadFile。
- * 手工挂 Authorization 头，走 venueSession.accessToken。
+ * H5 端文件直传 OSS：
+ *   1) GET /uploads/sts-token 拿 900s 临时凭证
+ *   2) 从 Taro.chooseImage 给的 blob: / 本地路径 fetch 出 Blob
+ *   3) 用 ali-oss JS SDK put 到 {prefix}/{random}{ext}
+ *
+ * 非 H5 端（小程序）暂不支持（要用 uni-upload 或自己签名 formAliyun）。
  */
 export async function uploadVenueFile(
   filePath: string,
   category: string,
   token: string
 ): Promise<{ url: string; path: string }> {
-  const r = await Taro.uploadFile({
-    url: `${API_BASE_URL}/uploads?category=${encodeURIComponent(category)}`,
-    filePath,
-    name: 'file',
-    header: { Authorization: `Bearer ${token}` }
+  if (typeof window === 'undefined' || typeof fetch === 'undefined') {
+    throw new Error('当前环境暂不支持 OSS 直传（小程序端待接入）')
+  }
+  const sts = await fetchStsToken(category, token)
+  const blob = await fetch(filePath).then((r) => r.blob())
+  const OSS = (await import('ali-oss')).default
+  const client = new OSS({
+    region: sts.region,
+    accessKeyId: sts.accessKeyId,
+    accessKeySecret: sts.accessKeySecret,
+    stsToken: sts.securityToken,
+    bucket: sts.bucket,
+    endpoint: sts.endpoint ?? undefined,
+    secure: true
   })
-  // Taro.uploadFile 返回 string
-  const parsed = JSON.parse(r.data) as {
-    code: number
-    data?: { url: string; path: string }
-    message?: string
-  }
-  if (parsed.code !== 0 || !parsed.data) {
-    throw new Error(parsed.message ?? '上传失败')
-  }
-  return parsed.data
+  const objectKey = `${sts.objectKeyPrefix}/${randomHex()}${extOfPath(filePath) || '.jpg'}`
+  const res = await client.put(objectKey, blob)
+  return { url: res.url, path: objectKey }
 }

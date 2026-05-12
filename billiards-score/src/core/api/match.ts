@@ -110,6 +110,9 @@ export const matchApi = {
         serverSeq: number
         actorUserId: string | null
         actorAdminId: string | null
+        actorNickname: string | null
+        actorPhoneMasked: string | null
+        actorAdminName: string | null
         type: string
         payloadJson: Record<string, unknown>
         undone: boolean
