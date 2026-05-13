@@ -157,7 +157,14 @@ export default function VenueLogin() {
             还没有球房账号？
           </Paragraph>
           <Space direction="vertical" style={{ width: '100%' }}>
-            <Button block onClick={() => navigate('/apply')}>
+            <Button
+              block
+              onClick={() =>
+                message.info(
+                  '请在上方输入手机号 + 验证码登录，登录后会自动进入申请入驻流程'
+                )
+              }
+            >
               🎱 申请球房入驻
             </Button>
             <Button type="link" size="small" onClick={() => navigate('/login')}>
