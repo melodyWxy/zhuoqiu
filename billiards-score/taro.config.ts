@@ -30,7 +30,15 @@ const config: UserConfigExport = {
     postcss: {
       pxtransform: {
         enable: true,
-        config: {}
+        config: {
+          designWidth: 375,
+          deviceRatio: {
+            640: 2.34 / 2,
+            750: 1,
+            828: 1.81 / 2,
+            375: 2 / 1
+          }
+        }
       },
       url: {
         enable: true,
