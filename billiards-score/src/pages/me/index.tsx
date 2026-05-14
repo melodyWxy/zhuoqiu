@@ -121,8 +121,38 @@ export default function MePage() {
 
   const groups = groupByDate(records)
 
+  const openMoreMenu = async () => {
+    const items: { label: string; run: () => void }[] = []
+    if (!venueSession) {
+      items.push({
+        label: '🏢 切换到球房管理模式',
+        run: () => Taro.navigateTo({ url: '/pages/venue-login/index' })
+      })
+    }
+    if (items.length === 0) return
+    const res = await Taro.showActionSheet({
+      itemList: items.map((x) => x.label)
+    }).catch(() => null)
+    if (res && typeof res.tapIndex === 'number') {
+      items[res.tapIndex].run()
+    }
+  }
+
+  const showMoreBtn = !venueSession
+
   return (
     <View className='me-page'>
+      {showMoreBtn && (
+        <View className='me-topbar'>
+          <View
+            className='me-more-btn'
+            onClick={openMoreMenu}
+            hoverClass='me-more-btn-hover'
+          >
+            ⋯
+          </View>
+        </View>
+      )}
       {cloudUser ? (
         <View className='cloud-account-card'>
           <View className='cloud-row'>
@@ -157,54 +187,32 @@ export default function MePage() {
         </View>
       )}
 
-      {/* 球房管理模式入口（v2.10） */}
-      <View className='venue-mode-card'>
-        {venueSession ? (
-          <>
-            <View className='venue-mode-row'>
-              <Text className='venue-mode-icon'>🏢</Text>
-              <View className='venue-mode-info'>
-                <Text className='venue-mode-title'>
-                  当前已登录商家：{venueSession.account.nickname}
-                </Text>
-                <Text className='venue-mode-sub'>
-                  {venueSession.account.venueId
-                    ? `已绑定球房 · ${venueSession.account.venueId.slice(0, 12)}…`
-                    : '尚未绑定球房，可继续完成入驻申请'}
-                </Text>
-              </View>
+      {/* 球房管理模式入口（v2.10，v2.20 未登录态收进右上角 ⋯ 菜单） */}
+      {venueSession && (
+        <View className='venue-mode-card'>
+          <View className='venue-mode-row'>
+            <Text className='venue-mode-icon'>🏢</Text>
+            <View className='venue-mode-info'>
+              <Text className='venue-mode-title'>
+                当前已登录商家：{venueSession.account.nickname}
+              </Text>
+              <Text className='venue-mode-sub'>
+                {venueSession.account.venueId
+                  ? `已绑定球房 · ${venueSession.account.venueId.slice(0, 12)}…`
+                  : '尚未绑定球房，可继续完成入驻申请'}
+              </Text>
             </View>
-            <View
-              className='venue-mode-btn'
-              onClick={() =>
-                Taro.navigateTo({ url: '/pages/venue-apply/index' })
-              }
-            >
-              {venueSession.account.venueId ? '查看球房状态 →' : '查看 / 完成申请 →'}
-            </View>
-          </>
-        ) : (
-          <>
-            <View className='venue-mode-row'>
-              <Text className='venue-mode-icon'>🏢</Text>
-              <View className='venue-mode-info'>
-                <Text className='venue-mode-title'>切换到球房管理模式</Text>
-                <Text className='venue-mode-sub'>
-                  已入驻商家可登录查看自家球房 / 赛事；新商家可申请入驻
-                </Text>
-              </View>
-            </View>
-            <View
-              className='venue-mode-btn'
-              onClick={() =>
-                Taro.navigateTo({ url: '/pages/venue-login/index' })
-              }
-            >
-              切换到球房管理模式 →
-            </View>
-          </>
-        )}
-      </View>
+          </View>
+          <View
+            className='venue-mode-btn'
+            onClick={() =>
+              Taro.navigateTo({ url: '/pages/venue-apply/index' })
+            }
+          >
+            {venueSession.account.venueId ? '查看球房状态 →' : '查看 / 完成申请 →'}
+          </View>
+        </View>
+      )}
 
       <View className='profile-card'>
         <View className='avatar' onClick={() => setAvatarModalOpen(true)}>

@@ -5,6 +5,34 @@
   color: var(--text-primary);
 }
 
+/* v2.20 右上角 ⋯ 菜单（未登录商家时出现，点开 ActionSheet 含「切换到球房管理模式」） */
+.me-topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.me-more-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.me-more-btn-hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent);
+}
+
 /* 云账号卡片 */
 .cloud-account-card {
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
