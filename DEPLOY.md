@@ -137,3 +137,9 @@ A: 本期 H5 Nginx 默认走相对路径 `/v1`（同源）。要分域名：改 
 
 **Q: 重启后 seed 会重建 admin 账号吗？**
 A: 不会。seed.ts 用 `findUnique` + `if (existing) 跳过`，是幂等的。
+
+**Q: 微信小程序请求接口为什么是 localhost？**
+A: 用 `npm run build:weapp:prod`（已在 `billiards-score/package.json`），或自己 export `TARO_APP_API_BASE` / `TARO_APP_WS_BASE` 后再 `npm run build:weapp`。`build:weapp`（不带 `:prod`）保留 dev 行为，便于本机真机调试连本地 server。
+
+**Q: 拆 API 域名部署 H5 时怎么办？**
+A: 用 `npm run build:h5:prod`，或自定义生产域名 `cross-env TARO_APP_API_BASE=... TARO_APP_WS_BASE=... npm run build:h5`。同源部署（nginx 反代 `/v1`、`/ws`）下普通 `build:h5` 即可，会按 `window.location` 走同源。

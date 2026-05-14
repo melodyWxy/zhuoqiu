@@ -40,7 +40,17 @@ module.exports = {
     postcss: {
       pxtransform: {
         enable: true,
-        config: {}
+        // 让 weapp 的 px → rpx 走 ×2（14px → 28rpx → on 375 设备 = 14 CSS px，对齐 H5）。
+        // 顶层 deviceRatio[375]=1 会被 recursiveMerge 到 pxtransform，这里显式覆盖回 2。
+        config: {
+          designWidth: 375,
+          deviceRatio: {
+            640: 2.34 / 2,
+            750: 1,
+            828: 1.81 / 2,
+            375: 2
+          }
+        }
       },
       url: {
         enable: true,
