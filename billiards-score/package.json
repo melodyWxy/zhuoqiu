@@ -7,7 +7,9 @@
     "dev:weapp": "taro build --type weapp --watch",
     "dev:h5": "taro build --type h5 --watch",
     "build:weapp": "taro build --type weapp",
-    "build:h5": "taro build --type h5"
+    "build:weapp:prod": "cross-env TARO_APP_API_BASE=https://billiards-server.macrobit.com.cn/v1 TARO_APP_WS_BASE=wss://billiards-server.macrobit.com.cn/ws taro build --type weapp",
+    "build:h5": "taro build --type h5",
+    "build:h5:prod": "cross-env TARO_APP_API_BASE=https://billiards-server.macrobit.com.cn/v1 TARO_APP_WS_BASE=wss://billiards-server.macrobit.com.cn/ws taro build --type h5"
   },
   "keywords": [
     "taro",
@@ -42,6 +44,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "babel-preset-taro": "^4.2.0",
+    "cross-env": "^10.1.0",
     "css-loader": "^6.0.0",
     "sass": "^1.70.0",
     "sass-loader": "^13.0.0",
