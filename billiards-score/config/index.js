@@ -40,16 +40,15 @@ module.exports = {
     postcss: {
       pxtransform: {
         enable: true,
+        // 让 weapp 的 px → rpx 走 ×2（14px → 28rpx → on 375 设备 = 14 CSS px，对齐 H5）。
+        // 顶层 deviceRatio[375]=1 会被 recursiveMerge 到 pxtransform，这里显式覆盖回 2。
         config: {
-          // 强制按顶层 designWidth=375 计算 px → rpx 倍率（×2）。
-          // 不写的话 postcss-pxtransform 默认用 750，结果 1:1 直接平移
-          // → 所有 px 都被压成原 rpx 数值（视觉砍半）。这是 weapp "整页显小" 的根因。
           designWidth: 375,
           deviceRatio: {
             640: 2.34 / 2,
             750: 1,
             828: 1.81 / 2,
-            375: 2 / 1
+            375: 2
           }
         }
       },
