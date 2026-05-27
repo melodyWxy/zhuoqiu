@@ -310,6 +310,15 @@
 
 .about-value { color: var(--text-secondary); }
 
+.about-row-link {
+  cursor: pointer;
+  color: var(--accent);
+
+  .about-value { color: var(--accent); }
+
+  &:active { opacity: 0.7; }
+}
+
 /* v2.10 球房管理模式入口 */
 .venue-mode-card {
   margin: 12px 16px 0;
@@ -354,6 +363,20 @@
   padding: 10px 14px;
   background: var(--accent);
   color: var(--primary-dark);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active { opacity: 0.85; }
+}
+
+.venue-mode-logout {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.5);
   border-radius: 8px;
   text-align: center;
   font-size: 14px;

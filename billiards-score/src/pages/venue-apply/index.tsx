@@ -183,7 +183,7 @@ export default function VenueApplyPage() {
           <Text className='va-tip'>
             管理功能（发赛事 / 现场控台）请到管理后台操作
           </Text>
-          <Button className='va-btn-secondary' onClick={handleLogout}>
+          <Button className='va-btn-logout' onClick={handleLogout}>
             退出商家登录
           </Button>
         </View>
@@ -226,7 +226,7 @@ export default function VenueApplyPage() {
             />
           )}
         </View>
-        <Button className='va-btn-secondary' onClick={handleLogout}>
+        <Button className='va-btn-logout' onClick={handleLogout}>
           退出商家登录
         </Button>
       </View>
@@ -349,6 +349,10 @@ export default function VenueApplyPage() {
           onClick={() => Taro.switchTab({ url: '/pages/me/index' })}
         >
           稍后再说
+        </Button>
+
+        <Button className='va-btn-logout' onClick={handleLogout}>
+          退出商家登录
         </Button>
       </View>
     </View>

@@ -5,7 +5,7 @@ export interface LegalSection {
 
 export const LEGAL_EFFECTIVE_DATE = '2026-05-27'
 export const LEGAL_OPERATOR = '击球帮'
-export const LEGAL_CONTACT_EMAIL = 'support@jiqiubang.example'
+export const LEGAL_CONTACT_EMAIL = '18210711176@163.com'
 
 export const PRIVACY_SECTIONS: LegalSection[] = [
   {

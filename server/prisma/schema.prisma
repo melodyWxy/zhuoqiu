@@ -46,6 +46,7 @@ model User {
   ownedMatches   Match[]         @relation("OwnerMatches")
   seatOccupancies MatchPlayer[]
   authoredEvents  MatchEvent[]
+  feedbacks      Feedback[]
 
   @@index([status])
   @@index([createdAt])
@@ -496,4 +497,36 @@ model TournamentBracketMatch {
   @@unique([tournamentId, round, slotInRound])
   @@index([tournamentId, round])
   @@map("tournament_bracket_matches")
+}
+
+// ============================================================
+// 用户反馈（帮助与反馈）
+// ============================================================
+
+enum FeedbackType {
+  bug
+  suggestion
+  cooperation
+}
+
+enum FeedbackStatus {
+  pending
+  resolved
+}
+
+model Feedback {
+  id         String         @id // fb_xxxxxxxx
+  userId     String?        @map("user_id")
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type       FeedbackType
+  content    String         @db.VarChar(500)
+  status     FeedbackStatus @default(pending)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  resolvedAt DateTime?      @map("resolved_at")
+  resolvedBy String?        @map("resolved_by") @db.VarChar(64)
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("feedbacks")
 }

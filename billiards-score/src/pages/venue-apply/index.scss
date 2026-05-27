@@ -55,6 +55,8 @@
 
 /* 上传 / 资质 */
 .va-btn-upload {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 6px;
   background: rgba(212, 175, 55, 0.12);
   color: var(--accent);
@@ -89,6 +91,8 @@
 
 /* 提交按钮 */
 .va-btn-primary {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 16px;
   background: var(--accent);
   color: var(--primary-dark);
@@ -100,10 +104,25 @@
 }
 
 .va-btn-secondary {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 8px;
   background: rgba(160, 168, 164, 0.15);
   color: var(--text-secondary);
   border: 1px solid var(--text-secondary);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+/* 退出商家登录：与 secondary 同尺寸，颜色走错误色区分 */
+.va-btn-logout {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.5);
   border-radius: 8px;
   padding: 12px;
   font-size: 14px;
