@@ -5,6 +5,7 @@ import { useUserStore } from '../../core/user/store'
 import { useMatchStore, MatchRecord } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
 import { authApi, meApi } from '../../core/api/auth'
+import { venueAuthApi } from '../../core/api/venue'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
@@ -13,6 +14,7 @@ import { isWeapp } from '../../utils/wxPrivacy'
 import AvatarPickerModal from '../../components/AvatarPickerModal'
 import LoginSheet from '../../components/LoginSheet'
 import BindPhoneSheet from '../../components/BindPhoneSheet'
+import FeedbackModal from '../../components/FeedbackModal'
 import './index.scss'
 
 type CloudHistoryItem = MatchDetail & { durationMs?: number }
@@ -78,11 +80,13 @@ export default function MePage() {
   const setCloudUser = useAuthStore((s) => s.setUser)
   const clearAuth = useAuthStore((s) => s.clear)
   const venueSession = useAuthStore((s) => s.venueSession)
+  const clearVenueSession = useAuthStore((s) => s.clearVenueSession)
 
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false)
   const [avatarModalOpen, setAvatarModalOpen] = useState(false)
   const [loginSheetOpen, setLoginSheetOpen] = useState(false)
   const [bindPhoneSheetOpen, setBindPhoneSheetOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [tab, setTab] = useState<'cloud' | 'local'>('cloud')
   const [cloudHistory, setCloudHistory] = useState<CloudHistoryItem[]>([])
   const [savingProfile, setSavingProfile] = useState(false)
@@ -336,6 +340,20 @@ export default function MePage() {
           >
             {venueSession.account.venueId ? '查看球房状态 →' : '查看 / 完成申请 →'}
           </View>
+          <View
+            className='venue-mode-logout'
+            onClick={async () => {
+              try {
+                await venueAuthApi.logout()
+              } catch {
+                // ignore
+              }
+              clearVenueSession()
+              Taro.showToast({ title: '已退出商家登录', icon: 'none' })
+            }}
+          >
+            退出商家登录
+          </View>
         </View>
       )}
 
@@ -471,6 +489,13 @@ export default function MePage() {
           <Text>版本</Text>
           <Text className='about-value'>v1.0.0</Text>
         </View>
+        <View
+          className='about-row about-row-link'
+          onClick={() => setFeedbackOpen(true)}
+        >
+          <Text>帮助与反馈</Text>
+          <Text className='about-value'>→</Text>
+        </View>
       </View>
 
       <InputModal
@@ -498,6 +523,11 @@ export default function MePage() {
       <BindPhoneSheet
         visible={bindPhoneSheetOpen}
         onClose={() => setBindPhoneSheetOpen(false)}
+      />
+
+      <FeedbackModal
+        visible={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
       />
     </View>
   )

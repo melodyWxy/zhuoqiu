@@ -8,6 +8,7 @@ import UsersList from './pages/Users/List'
 import UserDetailPage from './pages/Users/Detail'
 import Audit from './pages/Audit'
 import Settings from './pages/Settings'
+import FeedbackList from './pages/Feedback/List'
 import VenueApplications from './pages/Venues/Applications'
 import VenueApplicationDetail from './pages/Venues/ApplicationDetail'
 import VenueLogin from './pages/VenueMerchant/VenueLogin'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
       { path: 'users/:id', element: <UserDetailPage /> },
       { path: 'venue-applications', element: <VenueApplications /> },
       { path: 'venue-applications/:id', element: <VenueApplicationDetail /> },
+      { path: 'feedback', element: <FeedbackList /> },
       { path: 'audit', element: <Audit /> },
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <Navigate to="/" replace /> }

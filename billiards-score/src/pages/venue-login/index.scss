@@ -88,6 +88,8 @@
 }
 
 .vl-login-btn {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 8px;
   background: var(--accent);
   color: var(--primary-dark);
@@ -127,6 +129,8 @@
 }
 
 .vl-apply-btn {
+  width: 100%;
+  box-sizing: border-box;
   border: 1.5px dashed var(--accent);
   background: rgba(212, 175, 55, 0.1);
   color: var(--accent);

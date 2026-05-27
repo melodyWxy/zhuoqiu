@@ -12,6 +12,7 @@ import { AuditModule } from './audit/audit.module'
 import { RealtimeModule } from './realtime/realtime.module'
 import { VenueModule } from './venue/venue.module'
 import { UploadModule } from './upload/upload.module'
+import { FeedbackModule } from './feedback/feedback.module'
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { UploadModule } from './upload/upload.module'
     MeModule,
     AdminModule,
     VenueModule,
-    UploadModule
+    UploadModule,
+    FeedbackModule
   ]
 })
 export class AppModule {}
