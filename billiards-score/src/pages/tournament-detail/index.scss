@@ -162,11 +162,16 @@
 }
 
 .td-btn {
+  width: 100%;
+  box-sizing: border-box;
   border-radius: 10px;
   font-size: 16px;
   font-weight: 600;
   padding: 10px;
   border: none;
+  &::after {
+    border: none;
+  }
 }
 
 .td-btn-primary {

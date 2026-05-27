@@ -6,11 +6,12 @@ import { UserAuthController } from './user-auth.controller'
 import { AdminAuthGuard } from './admin-auth.guard'
 import { UserAuthGuard } from './user-auth.guard'
 import { SmsService } from './sms.service'
+import { WechatService } from './wechat.service'
 
 @Module({
   imports: [JwtModule.register({})],
   controllers: [AdminAuthController, UserAuthController],
-  providers: [AuthService, AdminAuthGuard, UserAuthGuard, SmsService],
-  exports: [AuthService, AdminAuthGuard, UserAuthGuard, SmsService]
+  providers: [AuthService, AdminAuthGuard, UserAuthGuard, SmsService, WechatService],
+  exports: [AuthService, AdminAuthGuard, UserAuthGuard, SmsService, WechatService]
 })
 export class AuthModule {}

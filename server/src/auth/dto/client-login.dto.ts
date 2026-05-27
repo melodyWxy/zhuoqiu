@@ -21,6 +21,13 @@ export class WechatLoginDto {
   appId?: string
 }
 
+export class WechatPhoneDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  code!: string
+}
+
 export class DouyinLoginDto {
   @IsString()
   @IsNotEmpty()

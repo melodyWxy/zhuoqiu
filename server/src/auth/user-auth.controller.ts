@@ -9,13 +9,17 @@ import {
 import { PhoneCodePurpose } from '@prisma/client'
 import { AuthService } from './auth.service'
 import { SmsService } from './sms.service'
+import { WechatService } from './wechat.service'
 import { UsersService } from '../users/users.service'
 import { UserAuthGuard } from './user-auth.guard'
+import { CurrentUser } from './current-user.decorator'
+import { UserJwtPayload } from './jwt-payload'
 import {
   DouyinLoginDto,
   SendSmsDto,
   VerifySmsDto,
-  WechatLoginDto
+  WechatLoginDto,
+  WechatPhoneDto
 } from './dto/client-login.dto'
 import { RefreshTokenDto } from './dto/login.dto'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
@@ -28,21 +32,48 @@ export class UserAuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
-    private readonly smsService: SmsService
+    private readonly smsService: SmsService,
+    private readonly wechatService: WechatService
   ) {}
 
   @Post('wechat')
   @HttpCode(HttpStatus.OK)
   async wechatLogin(@Body() dto: WechatLoginDto) {
-    // MVP mock：把 code 当成伪 openId；生产接入 wx code2session
-    const appId = dto.appId ?? 'dev-wxmp'
-    const openId = `mock_wx_${dto.code.slice(0, 32)}`
+    const session = await this.wechatService.code2Session(dto.code)
     const user = await this.usersService.upsertByWechat({
-      mpAppId: appId,
-      openId
+      mpAppId: dto.appId ?? 'dev-wxmp',
+      openId: session.openId,
+      unionId: session.unionId
     })
     const tokens = this.authService.issueUserTokens(user)
     return { ...tokens, user: this.projectUser(user) }
+  }
+
+  /**
+   * 微信登录后由 <Button open-type="getPhoneNumber"> 触发；用户已登录态。
+   * 服务端拿 code → wx getuserphonenumber → bindPhone。
+   * 若手机号已被另一账号占用，抛 LOGIN_FAILED；前端引导用户走"我"页面的 BindPhoneSheet 合并流程。
+   */
+  @Post('wechat/phone')
+  @UseGuards(UserAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async wechatBindPhone(
+    @CurrentUser() current: UserJwtPayload,
+    @Body() dto: WechatPhoneDto
+  ) {
+    const info = await this.wechatService.getPhoneNumber(dto.code)
+    // info.phoneNumber 形如 +8613800138000；存库统一保留 +8 国际格式
+    const phone = info.phoneNumber.startsWith('+')
+      ? info.phoneNumber
+      : `+${info.countryCode}${info.purePhoneNumber}`
+    const r = await this.usersService.bindPhone(current.sub, phone)
+    if (!r.user || r.conflictUserId) {
+      throw new BusinessException(
+        ErrorCode.LOGIN_FAILED,
+        '该手机号已属另一账号，请到「我」页面进行账号合并'
+      )
+    }
+    return { user: this.projectUser(r.user) }
   }
 
   @Post('douyin')

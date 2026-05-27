@@ -49,6 +49,8 @@
 }
 
 .login-sheet-btn {
+  width: 100%;
+  box-sizing: border-box;
   padding: 14px;
   text-align: center;
   border-radius: 10px;
@@ -57,6 +59,10 @@
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
   cursor: pointer;
+  border: none;
+  line-height: 1.4;
+
+  &::after { border: none; }
 
   &:active { background: rgba(255, 255, 255, 0.12); }
 
@@ -71,4 +77,33 @@
     background: transparent;
     color: #a0a8a4;
   }
+
+  &.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.legal-link {
+  color: #d4af37;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:active { opacity: 0.7; }
+}
+
+.legal-link-sep {
+  color: #a0a8a4;
+  margin: 0 2px;
 }

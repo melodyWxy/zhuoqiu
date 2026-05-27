@@ -80,6 +80,10 @@ export function applyNineBallEvent(
       break
     }
     case 'foul': {
+      // 犯规者 -foulCompensation，被补偿方 +foulCompensation（总分守恒）。
+      // 若 compensate 选了 fouler 自己，二者相加即净零，等价于"撤销本次犯规"的取消语义。
+      next.scores[event.foulerSlot] =
+        (next.scores[event.foulerSlot] ?? 0) - rules.foulCompensation
       next.scores[event.compensateSlot] =
         (next.scores[event.compensateSlot] ?? 0) + rules.foulCompensation
       break
