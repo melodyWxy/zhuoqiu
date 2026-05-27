@@ -52,6 +52,11 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     cors: buildCorsConfig()
   })
+  // 信任反向代理（Caddy / nginx）传过来的 X-Forwarded-Proto / Host，
+  // 否则 req.protocol 会一直是 http（内网通信），上传接口拼出来的 URL 也是 http，
+  // 在微信小程序里 <Image> 会静默拒绝加载。
+  app.set('trust proxy', true)
+
   // 上传文件本地静态访问（MVP）
   const uploadRoot = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads')
   mkdirSync(uploadRoot, { recursive: true })
