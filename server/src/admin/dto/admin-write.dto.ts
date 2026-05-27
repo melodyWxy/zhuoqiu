@@ -35,3 +35,10 @@ export class UnbanUserDto {
   @Length(0, 255)
   reason?: string
 }
+
+export class DeleteUserDto {
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 255)
+  reason!: string
+}

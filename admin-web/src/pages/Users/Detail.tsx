@@ -15,7 +15,7 @@ import {
   Typography,
   message
 } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { usersApi } from '../../api/users'
@@ -97,6 +97,54 @@ export default function UserDetailPage() {
     })
   }
 
+  const handleDelete = () => {
+    if (!id || !data) return
+    let reason = ''
+    let confirmText = ''
+    Modal.confirm({
+      title: '删除用户（不可恢复）',
+      icon: <ExclamationCircleFilled style={{ color: '#ff4d4f' }} />,
+      width: 520,
+      content: (
+        <Form
+          layout="vertical"
+          onValuesChange={(_, v) => {
+            reason = v.reason ?? reason
+            confirmText = v.confirmText ?? confirmText
+          }}
+        >
+          <Typography.Paragraph type="warning" style={{ marginTop: 0 }}>
+            将真删 user 行 + 微信/抖音绑定 + 验证码 + 赛事报名记录；
+            历史比赛保留但匿名化（参与方/事件作者置 null，比赛归属转给系统占位账号）。
+            <br />
+            操作不可恢复，仅 super_admin 可执行。
+          </Typography.Paragraph>
+          <Form.Item label="删除原因（必填）" name="reason">
+            <Input.TextArea rows={2} placeholder="如：测试账号 / 用户申请注销 / 合规要求" />
+          </Form.Item>
+          <Form.Item label={`输入用户 id 「${id}」以确认`} name="confirmText">
+            <Input placeholder={id} />
+          </Form.Item>
+        </Form>
+      ),
+      okType: 'danger',
+      okText: '确认删除',
+      async onOk() {
+        if (confirmText.trim() !== id) {
+          message.error('user id 不匹配，已取消')
+          throw new Error('confirm mismatch')
+        }
+        if (!reason.trim()) {
+          message.error('请填写删除原因')
+          throw new Error('reason required')
+        }
+        await usersApi.remove(id, reason.trim())
+        message.success('已删除')
+        navigate('/users')
+      }
+    })
+  }
+
   if (loading || !data) {
     return (
       <Spin spinning>
@@ -106,6 +154,7 @@ export default function UserDetailPage() {
   }
 
   const canWrite = role === 'super_admin' || role === 'operator'
+  const canDelete = role === 'super_admin'
 
   return (
     <div>
@@ -142,11 +191,14 @@ export default function UserDetailPage() {
               <Button danger disabled={!canWrite} onClick={handleBan}>
                 封禁
               </Button>
-            ) : (
+            ) : data.status === 'banned' ? (
               <Button disabled={!canWrite} onClick={handleUnban}>
                 解封
               </Button>
-            )}
+            ) : null}
+            <Button danger disabled={!canDelete} onClick={handleDelete}>
+              删除
+            </Button>
           </Space>
         </Space>
       </Card>

@@ -23,5 +23,9 @@ export const usersApi = {
     http.post(`/admin/users/${id}/ban`, { durationDays, reason }),
 
   unban: (id: string, reason?: string) =>
-    http.post(`/admin/users/${id}/unban`, { reason: reason ?? '' })
+    http.post(`/admin/users/${id}/unban`, { reason: reason ?? '' }),
+
+  /** 真删用户（不可逆）：仅 super_admin 可调 */
+  remove: (id: string, reason: string) =>
+    http.post(`/admin/users/${id}/delete`, { reason })
 }

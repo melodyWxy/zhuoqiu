@@ -1,14 +1,15 @@
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, Button } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { useUserStore } from '../../core/user/store'
 import { useMatchStore, MatchRecord } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
-import { authApi } from '../../core/api/auth'
+import { authApi, meApi } from '../../core/api/auth'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
 import { isAvatarUrl } from '../../utils/avatar'
+import { isWeapp } from '../../utils/wxPrivacy'
 import AvatarPickerModal from '../../components/AvatarPickerModal'
 import LoginSheet from '../../components/LoginSheet'
 import BindPhoneSheet from '../../components/BindPhoneSheet'
@@ -16,7 +17,7 @@ import './index.scss'
 
 type CloudHistoryItem = MatchDetail & { durationMs?: number }
 
-const AVATAR_CHOICES = ['🎱', '🧍', '🦸', '🥷', '🐯', '🦊', '🐼', '🐶', '🐱', '🦁', '🐰', '🐻']
+const AVATAR_EMOJI_CHOICES = ['🎱', '🧍', '🦸', '🥷', '🐯', '🦊', '🐼', '🐶', '🐱', '🦁', '🐰', '🐻']
 
 function formatDateGroup(ts: number): string {
   const now = new Date()
@@ -53,10 +54,28 @@ function groupByDate(records: MatchRecord[]): { date: string; items: MatchRecord
   return order.map((date) => ({ date, items: groups[date] }))
 }
 
+function AvatarView({ avatar, large }: { avatar: string; large?: boolean }) {
+  if (isAvatarUrl(avatar)) {
+    return (
+      <Image
+        className={large ? 'identity-avatar-img-lg' : 'identity-avatar-img'}
+        src={avatar}
+        mode='aspectFill'
+      />
+    )
+  }
+  return (
+    <Text className={large ? 'identity-avatar-emoji-lg' : 'identity-avatar-emoji'}>
+      {avatar}
+    </Text>
+  )
+}
+
 export default function MePage() {
-  const { nickname, avatar, setNickname, setAvatar } = useUserStore()
+  const { nickname: localNickname, avatar: localAvatar, setNickname: setLocalNickname, setAvatar: setLocalAvatar } = useUserStore()
   const { records, removeMatch } = useMatchStore()
   const cloudUser = useAuthStore((s) => s.user)
+  const setCloudUser = useAuthStore((s) => s.setUser)
   const clearAuth = useAuthStore((s) => s.clear)
   const venueSession = useAuthStore((s) => s.venueSession)
 
@@ -66,6 +85,7 @@ export default function MePage() {
   const [bindPhoneSheetOpen, setBindPhoneSheetOpen] = useState(false)
   const [tab, setTab] = useState<'cloud' | 'local'>('cloud')
   const [cloudHistory, setCloudHistory] = useState<CloudHistoryItem[]>([])
+  const [savingProfile, setSavingProfile] = useState(false)
 
   // 加载云端历史
   const loadCloudHistory = async () => {
@@ -91,6 +111,68 @@ export default function MePage() {
   useDidShow(() => {
     if (cloudUser) loadCloudHistory()
   })
+
+  // 当前展示用的昵称/头像（登录态优先云端，未登录用本地）
+  const displayNickname = cloudUser?.nickname ?? localNickname
+  const displayAvatar = cloudUser?.avatar ?? localAvatar
+
+  const handleNicknameConfirm = async (v: string) => {
+    setNicknameModalOpen(false)
+    const trimmed = v.trim()
+    if (!trimmed) return
+    if (cloudUser) {
+      setSavingProfile(true)
+      try {
+        const r = await meApi.update({ nickname: trimmed })
+        setCloudUser({ ...cloudUser, nickname: r.nickname, avatar: r.avatar })
+        Taro.showToast({ title: '已更新', icon: 'success' })
+      } catch (e) {
+        Taro.showToast({ title: (e as Error)?.message || '更新失败', icon: 'none' })
+      } finally {
+        setSavingProfile(false)
+      }
+    } else {
+      setLocalNickname(trimmed)
+    }
+  }
+
+  const handleAvatarPickEmoji = async (emoji: string) => {
+    setAvatarModalOpen(false)
+    if (cloudUser) {
+      setSavingProfile(true)
+      try {
+        const r = await meApi.update({ avatar: emoji })
+        setCloudUser({ ...cloudUser, nickname: r.nickname, avatar: r.avatar })
+        Taro.showToast({ title: '已更新', icon: 'success' })
+      } catch (e) {
+        Taro.showToast({ title: (e as Error)?.message || '更新失败', icon: 'none' })
+      } finally {
+        setSavingProfile(false)
+      }
+    } else {
+      setLocalAvatar(emoji)
+    }
+  }
+
+  const handleChooseWxAvatar = async (e: any) => {
+    if (!cloudUser) return
+    const filePath: string | undefined = e?.detail?.avatarUrl
+    if (!filePath) {
+      Taro.showToast({ title: '未选择头像', icon: 'none' })
+      return
+    }
+    setSavingProfile(true)
+    try {
+      const up = await meApi.uploadAvatar(filePath)
+      const r = await meApi.update({ avatar: up.url })
+      setCloudUser({ ...cloudUser, nickname: r.nickname, avatar: r.avatar })
+      Taro.showToast({ title: '头像已更新', icon: 'success' })
+    } catch (err) {
+      Taro.showToast({ title: (err as Error)?.message || '更新失败', icon: 'none' })
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const handleLogout = async () => {
     const res = await Taro.showModal({
@@ -124,6 +206,18 @@ export default function MePage() {
 
   const openMoreMenu = async () => {
     const items: { label: string; run: () => void }[] = []
+    if (cloudUser && !cloudUser.phoneNumber) {
+      items.push({
+        label: '📱 绑定手机号',
+        run: () => setBindPhoneSheetOpen(true)
+      })
+    }
+    if (cloudUser) {
+      items.push({
+        label: '🚪 退出登录',
+        run: handleLogout
+      })
+    }
     if (!venueSession) {
       items.push({
         label: '🏢 切换到球房管理模式',
@@ -139,60 +233,78 @@ export default function MePage() {
     }
   }
 
-  const showMoreBtn = !venueSession
-
   return (
     <View className='me-page'>
-      {showMoreBtn && (
-        <View className='me-topbar'>
-          <View
-            className='me-more-btn'
-            onClick={openMoreMenu}
-            hoverClass='me-more-btn-hover'
-          >
-            ⋯
-          </View>
+      <View className='me-topbar'>
+        <View
+          className='me-more-btn'
+          onClick={openMoreMenu}
+          hoverClass='me-more-btn-hover'
+        >
+          ⋯
         </View>
-      )}
-      {cloudUser ? (
-        <View className='cloud-account-card'>
-          <View className='cloud-row'>
-            {isAvatarUrl(cloudUser.avatar) ? (
-              <Image className='cloud-avatar-img' src={cloudUser.avatar} mode='aspectFill' />
+      </View>
+
+      {/* 唯一身份卡：登录态用云端，未登录用本地 */}
+      <View className='identity-card'>
+        <View className='identity-row'>
+          {cloudUser && isWeapp() ? (
+            <Button
+              className='identity-avatar-btn'
+              openType='chooseAvatar'
+              onChooseAvatar={handleChooseWxAvatar}
+              disabled={savingProfile}
+            >
+              <AvatarView avatar={displayAvatar} />
+            </Button>
+          ) : (
+            <View
+              className='identity-avatar-btn'
+              onClick={() => !savingProfile && setAvatarModalOpen(true)}
+            >
+              <AvatarView avatar={displayAvatar} />
+            </View>
+          )}
+          <View className='identity-info'>
+            <View
+              className='identity-name-row'
+              onClick={() => !savingProfile && setNicknameModalOpen(true)}
+            >
+              <Text className='identity-name'>{displayNickname}</Text>
+              <Text className='identity-edit'>✏️</Text>
+            </View>
+            {cloudUser ? (
+              <>
+                <Text className='identity-meta'>
+                  {cloudUser.phoneNumber
+                    ? `📱 ${cloudUser.phoneNumber}`
+                    : '📱 未绑定手机号'}
+                </Text>
+                <Text className='identity-id'>
+                  id: {cloudUser.id.slice(0, 12)}…
+                </Text>
+              </>
             ) : (
-              <Text className='cloud-emoji'>{cloudUser.avatar}</Text>
+              <Text className='identity-meta'>本地模式 · 仅本机可见</Text>
             )}
-            <View className='cloud-info'>
-              <Text className='cloud-nickname'>{cloudUser.nickname}</Text>
-              <Text className='cloud-id'>id: {cloudUser.id.slice(0, 12)}...</Text>
-              <Text className='cloud-phone'>
-                手机号 · {cloudUser.phoneNumber ?? '未绑定'}
-              </Text>
-            </View>
-            <View className='cloud-actions'>
-              {!cloudUser.phoneNumber && (
-                <View className='cloud-btn' onClick={() => setBindPhoneSheetOpen(true)}>
-                  绑定手机
-                </View>
-              )}
-              <View className='cloud-btn cloud-btn-out' onClick={handleLogout}>
-                退出
-              </View>
-            </View>
           </View>
         </View>
-      ) : (
-        <View className='cloud-account-card cloud-card-anon'>
-          <View className='cloud-anon-text'>
-            登录后可与朋友联机记分、战绩云端保存
-          </View>
-          <View className='cloud-btn primary' onClick={() => setLoginSheetOpen(true)}>
+        {!cloudUser && (
+          <View
+            className='identity-login-btn'
+            onClick={() => setLoginSheetOpen(true)}
+          >
             登录 / 注册
           </View>
-        </View>
-      )}
+        )}
+        {!cloudUser && (
+          <Text className='identity-login-hint'>
+            登录可解锁联机记分、赛事报名、战绩云端保存
+          </Text>
+        )}
+      </View>
 
-      {/* 球房管理模式入口（v2.10，v2.20 未登录态收进右上角 ⋯ 菜单） */}
+      {/* 球房管理模式入口（已登录商家时显示；未登录商家由 ⋯ 菜单进入） */}
       {venueSession && (
         <View className='venue-mode-card'>
           <View className='venue-mode-row'>
@@ -218,17 +330,6 @@ export default function MePage() {
           </View>
         </View>
       )}
-
-      <View className='profile-card'>
-        <View className='avatar' onClick={() => setAvatarModalOpen(true)}>
-          <Text className='avatar-emoji'>{avatar}</Text>
-          <Text className='avatar-hint'>点击更换</Text>
-        </View>
-        <View className='nickname-row' onClick={() => setNicknameModalOpen(true)}>
-          <Text className='nickname'>{nickname}</Text>
-          <Text className='edit-icon'>✏️</Text>
-        </View>
-      </View>
 
       <View className='section'>
         <View className='section-title' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -368,23 +469,17 @@ export default function MePage() {
         visible={nicknameModalOpen}
         title='修改昵称'
         placeholder='请输入昵称'
-        initialValue={nickname}
+        initialValue={displayNickname}
         onCancel={() => setNicknameModalOpen(false)}
-        onConfirm={(v) => {
-          setNickname(v)
-          setNicknameModalOpen(false)
-        }}
+        onConfirm={handleNicknameConfirm}
       />
 
       <AvatarPickerModal
         visible={avatarModalOpen}
-        options={AVATAR_CHOICES}
-        current={avatar}
+        options={AVATAR_EMOJI_CHOICES}
+        current={isAvatarUrl(displayAvatar) ? '' : displayAvatar}
         onCancel={() => setAvatarModalOpen(false)}
-        onPick={(v) => {
-          setAvatar(v)
-          setAvatarModalOpen(false)
-        }}
+        onPick={handleAvatarPickEmoji}
       />
 
       <LoginSheet

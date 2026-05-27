@@ -3,6 +3,8 @@ import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useState } from 'react'
 import { useNineBallStore } from '../../core/game/store'
 import { useMatchStore } from '../../core/match/store'
+import { useAuthStore } from '../../core/auth/store'
+import { useUserStore } from '../../core/user/store'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
 import OnlineNineBall from './OnlineMode'
@@ -36,6 +38,8 @@ function LocalNineBall() {
     renamePlayer,
     clearGame
   } = useNineBallStore()
+  const cloudNickname = useAuthStore((s) => s.user?.nickname)
+  const localNickname = useUserStore((s) => s.nickname)
 
   const winItems: { label: string; kind: WinKind }[] = [
     { label: `✅ 普胜 (+${rules.normalWin})`, kind: 'normal' },
@@ -46,7 +50,9 @@ function LocalNineBall() {
 
   useDidShow(() => {
     if (players.length === 0) {
-      initGame(3, ['我', '玩家2', '玩家3'])
+      // 已登录用云端昵称，未登录用本地；长按改名只在本场比赛 state 内生效
+      const myName = cloudNickname || localNickname || '我'
+      initGame(3, [myName, '玩家2', '玩家3'])
     }
   })
 
