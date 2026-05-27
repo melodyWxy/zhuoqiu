@@ -13,10 +13,11 @@ import {
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { Request } from 'express'
-import { diskStorage } from 'multer'
+import { diskStorage, memoryStorage } from 'multer'
 import { extname, join } from 'path'
-import { mkdirSync } from 'fs'
+import { mkdirSync, writeFileSync } from 'fs'
 import { randomBytes } from 'crypto'
+import { OssDirectService } from '../upload/oss-direct.service'
 import {
   IsEnum,
   IsNotEmpty,
@@ -46,16 +47,8 @@ function avatarDayDir(): string {
   ).padStart(2, '0')}`
 }
 
-const avatarStorage = diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = join(AVATAR_UPLOAD_ROOT, 'avatar', avatarDayDir())
-    mkdirSync(dir, { recursive: true })
-    cb(null, dir)
-  },
-  filename: (_req, file, cb) => {
-    cb(null, randomBytes(12).toString('hex') + extname(file.originalname).toLowerCase())
-  }
-})
+// 内存暂存：拿到 buffer 后由 controller 决定推 OSS 还是落本地磁盘
+const avatarStorage = memoryStorage()
 
 class UpdateMeDto {
   @IsOptional()
@@ -107,7 +100,8 @@ class MergeAccountsDto {
 export class MeController {
   constructor(
     private readonly usersService: UsersService,
-    private readonly smsService: SmsService
+    private readonly smsService: SmsService,
+    private readonly ossDirect: OssDirectService
   ) {}
 
   @Get()
@@ -146,10 +140,10 @@ export class MeController {
 
   /**
    * 用户头像上传。
-   * - 由 LoginSheet wechat_profile step 触发：用户从微信 chooseAvatar 拿到 wxfile 临时路径，
-   *   再 Taro.uploadFile 多端到本接口；本接口落地到本地磁盘并返回 URL。
-   * - OSS_ENABLED=true 时本接口仍可用（兜底链路）；正式 OSS 直传走 venue 那套 STS 链路，
-   *   后续可统一。
+   * - 由 LoginSheet wechat_profile step 触发：客户端从微信 chooseAvatar 拿 wxfile 临时路径，
+   *   再用 Taro.uploadFile 把文件 multipart 推到本接口
+   * - OSS_ENABLED=true → 用 server 主 AK 直接 PutObject 到阿里云 OSS，返回 https URL（生产）
+   * - OSS_ENABLED=false → 落到本地磁盘 + 静态目录返回 URL（dev 兜底）
    */
   @Post('avatar')
   @HttpCode(HttpStatus.OK)
@@ -173,17 +167,32 @@ export class MeController {
     })
   )
   async uploadAvatar(
+    @CurrentUser() user: UserJwtPayload,
     @UploadedFile() file: MulterFile | undefined,
     @Req() req: Request
   ) {
-    if (!file) {
+    if (!file || !file.buffer) {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '未收到文件')
     }
-    const relPath = `avatar/${avatarDayDir()}/${file.filename}`
+    const ext = extname(file.originalname).toLowerCase() || '.png'
+    const filename = `${user.sub}-${randomBytes(8).toString('hex')}${ext}`
+    const key = `avatar/${avatarDayDir()}/${filename}`
+
+    // 生产：直推 OSS
+    if (this.ossDirect.isEnabled()) {
+      const url = await this.ossDirect.putBuffer(key, file.buffer, file.mimetype)
+      return { url, path: key, size: file.size, mime: file.mimetype }
+    }
+
+    // 开发兜底：写本地磁盘
+    const dir = join(AVATAR_UPLOAD_ROOT, 'avatar', avatarDayDir())
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, filename), file.buffer)
+    // 信任 caddy/nginx 反代的 X-Forwarded-Proto（main.ts 已开 trust proxy），保证 https
     const origin = `${req.protocol}://${req.get('host')}`
     return {
-      url: `${origin}/uploads/${relPath}`,
-      path: relPath,
+      url: `${origin}/uploads/${key}`,
+      path: key,
       size: file.size,
       mime: file.mimetype
     }
