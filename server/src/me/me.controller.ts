@@ -1,10 +1,29 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors
+} from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { Request } from 'express'
+import { diskStorage } from 'multer'
+import { extname, join } from 'path'
+import { mkdirSync } from 'fs'
+import { randomBytes } from 'crypto'
 import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Length,
+  MaxLength,
   Matches
 } from 'class-validator'
 import { UserAuthGuard } from '../auth/user-auth.guard'
@@ -15,15 +34,42 @@ import { SmsService } from '../auth/sms.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
 import { PhoneCodePurpose } from '@prisma/client'
 
+type MulterFile = Express.Multer.File
+
+const AVATAR_UPLOAD_ROOT = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads')
+const AVATAR_ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp']
+
+function avatarDayDir(): string {
+  const d = new Date()
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(
+    d.getDate()
+  ).padStart(2, '0')}`
+}
+
+const avatarStorage = diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = join(AVATAR_UPLOAD_ROOT, 'avatar', avatarDayDir())
+    mkdirSync(dir, { recursive: true })
+    cb(null, dir)
+  },
+  filename: (_req, file, cb) => {
+    cb(null, randomBytes(12).toString('hex') + extname(file.originalname).toLowerCase())
+  }
+})
+
 class UpdateMeDto {
   @IsOptional()
   @IsString()
   @Length(1, 32)
   nickname?: string
 
+  /**
+   * 兼容历史 emoji（短）和新版 URL（最多 512 字符）。
+   * 历史：'🎱' / '🧍' 等单字符 emoji；新版微信头像：上传到 /me/avatar 后拿到的完整 URL。
+   */
   @IsOptional()
   @IsString()
-  @Length(1, 32)
+  @MaxLength(512)
   avatar?: string
 }
 
@@ -95,6 +141,51 @@ export class MeController {
       id: updated.id,
       nickname: updated.nickname,
       avatar: updated.avatar
+    }
+  }
+
+  /**
+   * 用户头像上传。
+   * - 由 LoginSheet wechat_profile step 触发：用户从微信 chooseAvatar 拿到 wxfile 临时路径，
+   *   再 Taro.uploadFile 多端到本接口；本接口落地到本地磁盘并返回 URL。
+   * - OSS_ENABLED=true 时本接口仍可用（兜底链路）；正式 OSS 直传走 venue 那套 STS 链路，
+   *   后续可统一。
+   */
+  @Post('avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: avatarStorage,
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!AVATAR_ALLOWED_MIME.includes(file.mimetype)) {
+          cb(
+            new BusinessException(
+              ErrorCode.BAD_REQUEST,
+              `仅支持 ${AVATAR_ALLOWED_MIME.join(', ')}，你上传的是 ${file.mimetype}`
+            ),
+            false
+          )
+          return
+        }
+        cb(null, true)
+      }
+    })
+  )
+  async uploadAvatar(
+    @UploadedFile() file: MulterFile | undefined,
+    @Req() req: Request
+  ) {
+    if (!file) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '未收到文件')
+    }
+    const relPath = `avatar/${avatarDayDir()}/${file.filename}`
+    const origin = `${req.protocol}://${req.get('host')}`
+    return {
+      url: `${origin}/uploads/${relPath}`,
+      path: relPath,
+      size: file.size,
+      mime: file.mimetype
     }
   }
 

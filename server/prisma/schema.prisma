@@ -30,7 +30,8 @@ model User {
   id             String         @id // u_xxxxxxxx
   phoneNumber    String?        @unique @map("phone_number") @db.VarChar(20)
   nickname       String         @db.VarChar(32)
-  avatar         String         @default("🎱") @db.VarChar(32)
+  // 兼容历史 emoji（'🎱' / '🧍' 等单字符）和新版 URL（微信头像上传后的完整地址）
+  avatar         String         @default("🎱") @db.VarChar(512)
   primarySource  PrimarySource  @map("primary_source")
   status         UserStatus     @default(active)
   banUntil       DateTime?      @map("ban_until")

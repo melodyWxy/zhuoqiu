@@ -1,5 +1,7 @@
+import Taro from '@tarojs/taro'
 import { callApi } from './client'
-import type { CloudUser } from '../auth/store'
+import { API_BASE_URL } from './config'
+import { useAuthStore, type CloudUser } from '../auth/store'
 
 interface LoginResponse {
   accessToken: string
@@ -66,6 +68,39 @@ export const meApi = {
       '/me/bind-phone',
       { method: 'POST', data: { phoneNumber, code } }
     ),
+
+  /**
+   * 上传用户头像。filePath 来自 wx.chooseAvatar（wxfile://）或浏览器 File（不在本端实现）。
+   * 返回服务端持久化后的完整 URL，可直接 PATCH /me 写入 user.avatar。
+   * 不走 callApi —— Taro.uploadFile 是独立的 multipart 通道，需要自己注入 token。
+   */
+  uploadAvatar: (filePath: string) =>
+    new Promise<{ url: string }>((resolve, reject) => {
+      const accessToken = useAuthStore.getState().accessToken
+      Taro.uploadFile({
+        url: `${API_BASE_URL}/me/avatar`,
+        filePath,
+        name: 'file',
+        header: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        success: (res) => {
+          try {
+            const body = JSON.parse(res.data) as {
+              code: number
+              data?: { url: string }
+              message?: string
+            }
+            if (body.code === 0 && body.data?.url) {
+              resolve({ url: body.data.url })
+            } else {
+              reject(new Error(body.message ?? '上传失败'))
+            }
+          } catch {
+            reject(new Error('上传响应解析失败'))
+          }
+        },
+        fail: (err) => reject(new Error(err.errMsg || '上传失败'))
+      })
+    }),
 
   unbindPhone: (code: string) =>
     callApi<{ ok: boolean }>('/me/unbind-phone', {

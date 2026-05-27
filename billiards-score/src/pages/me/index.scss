@@ -66,6 +66,14 @@
   flex-shrink: 0;
 }
 
+.cloud-avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .cloud-info {
   flex: 1;
   min-width: 0;
