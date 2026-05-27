@@ -59,7 +59,9 @@ UI：标题「为更好地为您服务，请授权使用您的手机号」
   └─ 后端调用失败 / 手机号已属另一账号 → toast 错误，留在原步骤
 ```
 
-「稍后绑定」走 finishLogin —— 用户可在「我」页面通过 BindPhoneSheet（短信验证码）补绑。
+「稍后绑定」走 finishLogin。补绑入口在「我」页身份卡的手机号行 ——
+- **小程序**：BindPhoneSheet 起手直接复用 wechat_phone 步骤的 `getPhoneNumber` 按钮 → POST `/auth/wechat/phone` 一键完成；同步保留「使用其他手机号」次按钮落到 SMS 流程做兜底（兼容用户想绑一个跟微信不同的号）。
+- **H5**：仍只能走 SMS 流程（无 `open-type=getPhoneNumber`）。
 
 **3.1.3 服务端 mock fallback**
 

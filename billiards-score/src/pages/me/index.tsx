@@ -275,11 +275,19 @@ export default function MePage() {
             </View>
             {cloudUser ? (
               <>
-                <Text className='identity-meta'>
-                  {cloudUser.phoneNumber
-                    ? `📱 ${cloudUser.phoneNumber}`
-                    : '📱 未绑定手机号'}
-                </Text>
+                {cloudUser.phoneNumber ? (
+                  <Text className='identity-meta'>📱 {cloudUser.phoneNumber}</Text>
+                ) : (
+                  <View className='identity-meta-row'>
+                    <Text className='identity-meta'>📱 未绑定手机号</Text>
+                    <Text
+                      className='identity-bind-btn'
+                      onClick={() => setBindPhoneSheetOpen(true)}
+                    >
+                      去绑定 →
+                    </Text>
+                  </View>
+                )}
                 <Text className='identity-id'>
                   id: {cloudUser.id.slice(0, 12)}…
                 </Text>

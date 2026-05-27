@@ -119,6 +119,27 @@
   color: var(--text-secondary);
 }
 
+.identity-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.identity-bind-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-dark, #0a0f0d);
+  background: var(--accent, #d4af37);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:active { opacity: 0.85; }
+}
+
 .identity-id {
   font-size: 11px;
   color: var(--text-secondary);
