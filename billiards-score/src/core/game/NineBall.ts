@@ -191,7 +191,7 @@ export function calcGolden9(
   return results
 }
 
-// 处理犯规
+// 处理犯规：犯规者 -points，被补偿方 +points（保持总分守恒）
 export function handleFoul(
   state: NineBallGameState,
   fouler: number,
@@ -200,11 +200,10 @@ export function handleFoul(
   const { rules } = state
   const points = rules.foulCompensation
 
-  return [{
-    playerId: scoreTo,
-    change: points,
-    type: 'foul'
-  }]
+  return [
+    { playerId: fouler, change: -points, type: 'foul' },
+    { playerId: scoreTo, change: points, type: 'foul' }
+  ]
 }
 
 // 应用得分结果
