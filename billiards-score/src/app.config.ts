@@ -12,7 +12,8 @@ export default defineAppConfig({
     'pages/venues/index',
     'pages/venue-detail/index',
     'pages/tournaments/index',
-    'pages/tournament-detail/index'
+    'pages/tournament-detail/index',
+    'pages/legal/index'
   ],
   window: {
     navigationBarTitleText: '击球帮',

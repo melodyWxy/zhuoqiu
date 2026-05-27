@@ -1,9 +1,11 @@
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authApi } from '../../core/api/auth'
-import { useAuthStore } from '../../core/auth/store'
+import { useAuthStore, type CloudUser } from '../../core/auth/store'
 import { tryResumeActiveMatch } from '../../core/match/resume'
+import { useLegalConsent } from '../../hooks/useLegalConsent'
+import { ensureWxPrivacyAuthorized, isWeapp } from '../../utils/wxPrivacy'
 import './index.scss'
 
 interface Props {
@@ -14,20 +16,26 @@ interface Props {
   redirectToActiveOnSuccess?: boolean
 }
 
-type Step = 'menu' | 'phone_input' | 'phone_verify'
+type Step =
+  | 'privacy'
+  | 'menu'
+  | 'phone_input'
+  | 'phone_verify'
+  | 'wechat_loading'
+  | 'wechat_phone'
 
 export default function LoginSheet({ visible, onClose, onSuccess, redirectToActiveOnSuccess }: Props) {
-  const [step, setStep] = useState<Step>('menu')
+  const { agreed, accept } = useLegalConsent()
+  const [step, setStep] = useState<Step>(() => initialStep(agreed))
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [devHint, setDevHint] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const setSession = useAuthStore((s) => s.setSession)
-
-  if (!visible) return null
+  const setUser = useAuthStore((s) => s.setUser)
 
   const reset = () => {
-    setStep('menu')
+    setStep(initialStep(agreed))
     setPhone('')
     setCode('')
   }
@@ -37,30 +45,138 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
     onClose()
   }
 
+  const closeSheetWithToast = async (toastTitle: string) => {
+    Taro.showToast({ title: toastTitle, icon: 'success' })
+    reset()
+    onClose()
+    onSuccess?.()
+    if (redirectToActiveOnSuccess) await tryResumeActiveMatch()
+  }
+
+  const finishLogin = async (
+    accessToken: string,
+    refreshToken: string,
+    user: CloudUser
+  ) => {
+    setSession({ accessToken, refreshToken, user })
+    await closeSheetWithToast('登录成功')
+  }
+
+  /**
+   * 微信登录主流程：
+   *  - 成功且 user.phoneNumber 已绑定 → 直接 finishLogin（关闭 sheet）
+   *  - 成功但无手机号 → 保持登录态（已 setSession），切到 wechat_phone 步骤让用户授权手机号
+   *  - 失败 → 退回 privacy / menu
+   */
   const handleWechat = async () => {
     setLoading(true)
+    setStep('wechat_loading')
     try {
-      let wxCode = 'h5-mock-' + Date.now() // H5 下用 mock
+      let wxCode = 'h5-mock-' + Date.now()
       try {
         const r = await Taro.login()
+        console.log('[LoginSheet] Taro.login 返回:', r)
         if (r.code) wxCode = r.code
-      } catch {
-        // Taro.login 在 H5 下会 fallback
+      } catch (e) {
+        console.warn('[LoginSheet] Taro.login 失败，降级 mock:', e)
       }
+      console.log('[LoginSheet] 提交 wechatLogin code:', wxCode)
       const r = await authApi.wechatLogin(wxCode)
-      setSession({
-        accessToken: r.accessToken,
-        refreshToken: r.refreshToken,
-        user: r.user
+      console.log('[LoginSheet] wechatLogin 返回:', {
+        user: r.user,
+        accessTokenLen: r.accessToken?.length,
+        refreshTokenLen: r.refreshToken?.length
       })
-      Taro.showToast({ title: '登录成功', icon: 'success' })
-      reset()
-      onClose()
-      onSuccess?.()
-      if (redirectToActiveOnSuccess) await tryResumeActiveMatch()
+      // 先建立会话，否则 wechat/phone 接口拿不到鉴权 header
+      setSession({ accessToken: r.accessToken, refreshToken: r.refreshToken, user: r.user })
+      if (r.user.phoneNumber) {
+        await closeSheetWithToast('登录成功')
+      } else {
+        setStep('wechat_phone')
+      }
+    } catch (e) {
+      setStep(isWeapp() ? 'privacy' : 'menu')
+      throw e
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGetPhoneNumber = async (e: any) => {
+    const detail = e?.detail ?? {}
+    console.log('[LoginSheet] getPhoneNumber 回调:', detail)
+    const code: string | undefined = detail.code
+    if (!code) {
+      // 用户拒绝授权 / errMsg 非 ok
+      Taro.showToast({ title: '已取消手机号授权', icon: 'none' })
+      return
+    }
+    setLoading(true)
+    try {
+      const r = await authApi.wechatBindPhone(code)
+      console.log('[LoginSheet] wechatBindPhone 返回:', r.user)
+      setUser(r.user)
+      await closeSheetWithToast('登录成功')
+    } catch (err) {
+      console.warn('[LoginSheet] wechatBindPhone 失败:', err)
+      Taro.showToast({ title: (err as Error)?.message || '获取手机号失败', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSkipPhone = async () => {
+    // 用户已登录但未绑手机号；之后可在「我」页面通过 BindPhoneSheet 补绑
+    await closeSheetWithToast('登录成功')
+  }
+
+  // visible 由 false 翻 true 时，根据当前 agreed 状态决定起手 step
+  // weapp 已同意 → 直接走微信登录，不展示菜单；H5 已同意 → 直接进 menu
+  useEffect(() => {
+    if (!visible) return
+    if (!agreed) {
+      setStep('privacy')
+      return
+    }
+    if (isWeapp()) {
+      setStep('wechat_loading')
+      handleWechat().catch(() => {
+        // 错误已在 handleWechat 内 toast 不到的话这里兜底
+        Taro.showToast({ title: '微信登录失败，请重试', icon: 'none' })
+      })
+    } else {
+      setStep('menu')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
+
+  if (!visible) return null
+
+  const handleAgree = async () => {
+    accept()
+    if (isWeapp()) {
+      setLoading(true)
+      try {
+        const ok = await ensureWxPrivacyAuthorized()
+        if (!ok) {
+          Taro.showToast({ title: '需同意隐私政策才能继续登录', icon: 'none' })
+          setLoading(false)
+          return
+        }
+        // 直登
+        await handleWechat()
+      } catch {
+        Taro.showToast({ title: '微信登录失败，请重试', icon: 'none' })
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      setStep('menu')
+    }
+  }
+
+  const openLegal = (type: 'privacy' | 'terms') => {
+    Taro.navigateTo({ url: `/pages/legal/index?type=${type}` }).catch(() => {})
   }
 
   const handleSendSms = async () => {
@@ -91,16 +207,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
     setLoading(true)
     try {
       const r = await authApi.verifyPhone(phone, code, 'login')
-      setSession({
-        accessToken: r.accessToken,
-        refreshToken: r.refreshToken,
-        user: r.user
-      })
-      Taro.showToast({ title: '登录成功', icon: 'success' })
-      reset()
-      onClose()
-      onSuccess?.()
-      if (redirectToActiveOnSuccess) await tryResumeActiveMatch()
+      await finishLogin(r.accessToken, r.refreshToken, r.user)
     } finally {
       setLoading(false)
     }
@@ -109,13 +216,60 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
   return (
     <View className='login-sheet-mask' onClick={handleClose}>
       <View className='login-sheet-box' onClick={(e) => e.stopPropagation()}>
+        {step === 'privacy' && (
+          <>
+            <Text className='login-sheet-title'>用户服务协议与隐私政策</Text>
+            <Text className='login-sheet-hint'>
+              为了向你提供登录、联机比赛、赛事报名等服务，我们需要在你授权后收集手机号或微信账号信息。请阅读并同意下列协议后继续：
+            </Text>
+            <View className='legal-links'>
+              <Text className='legal-link' onClick={() => openLegal('terms')}>《用户服务协议》</Text>
+              <Text className='legal-link-sep'>·</Text>
+              <Text className='legal-link' onClick={() => openLegal('privacy')}>《隐私政策》</Text>
+            </View>
+            <View
+              className={`login-sheet-btn primary ${loading ? 'is-loading' : ''}`}
+              onClick={loading ? undefined : handleAgree}
+            >
+              {loading ? '处理中…' : '同意并继续'}
+            </View>
+            <View className='login-sheet-btn cancel' onClick={handleClose}>
+              不同意
+            </View>
+          </>
+        )}
+
+        {step === 'wechat_loading' && (
+          <>
+            <Text className='login-sheet-title'>正在通过微信登录…</Text>
+            <Text className='login-sheet-hint'>请在系统弹窗中确认授权</Text>
+          </>
+        )}
+
+        {step === 'wechat_phone' && (
+          <>
+            <Text className='login-sheet-title'>授权手机号以完成登录</Text>
+            <Text className='login-sheet-hint'>
+              我们仅在你授权后获取已绑定微信的手机号，用于赛事报名识别与客服对账。
+            </Text>
+            <Button
+              className={`login-sheet-btn primary ${loading ? 'is-loading' : ''}`}
+              openType='getPhoneNumber'
+              onGetPhoneNumber={handleGetPhoneNumber}
+              disabled={loading}
+            >
+              {loading ? '正在绑定…' : '📱 微信授权手机号'}
+            </Button>
+            <View className='login-sheet-btn cancel' onClick={handleSkipPhone}>
+              稍后绑定
+            </View>
+          </>
+        )}
+
         {step === 'menu' && (
           <>
             <Text className='login-sheet-title'>登录以同步云端战绩</Text>
-            <View className='login-sheet-btn primary' onClick={handleWechat}>
-              🟢 微信一键登录
-            </View>
-            <View className='login-sheet-btn' onClick={() => setStep('phone_input')}>
+            <View className='login-sheet-btn primary' onClick={() => setStep('phone_input')}>
               📱 手机号登录
             </View>
             <View className='login-sheet-btn cancel' onClick={handleClose}>
@@ -123,6 +277,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
             </View>
           </>
         )}
+
         {step === 'phone_input' && (
           <>
             <Text className='login-sheet-title'>输入手机号</Text>
@@ -141,6 +296,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
             </View>
           </>
         )}
+
         {step === 'phone_verify' && (
           <>
             <Text className='login-sheet-title'>输入验证码</Text>
@@ -166,4 +322,10 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
       </View>
     </View>
   )
+}
+
+function initialStep(agreed: boolean): Step {
+  if (!agreed) return 'privacy'
+  if (isWeapp()) return 'wechat_loading'
+  return 'menu'
 }

@@ -17,6 +17,13 @@ export const authApi = {
       auth: false
     }),
 
+  /** 微信登录后通过 <Button open-type="getPhoneNumber"> 拿到的 code，换真实手机号并绑定到当前账号。 */
+  wechatBindPhone: (code: string) =>
+    callApi<{ user: CloudUser }>('/auth/wechat/phone', {
+      method: 'POST',
+      data: { code }
+    }),
+
   douyinLogin: (code: string, appId?: string) =>
     callApi<LoginResponse>('/auth/douyin', {
       method: 'POST',
