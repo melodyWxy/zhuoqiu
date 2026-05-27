@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { useUserStore } from '../../core/user/store'
@@ -8,6 +8,7 @@ import { authApi } from '../../core/api/auth'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
+import { isAvatarUrl } from '../../utils/avatar'
 import AvatarPickerModal from '../../components/AvatarPickerModal'
 import LoginSheet from '../../components/LoginSheet'
 import BindPhoneSheet from '../../components/BindPhoneSheet'
@@ -156,7 +157,11 @@ export default function MePage() {
       {cloudUser ? (
         <View className='cloud-account-card'>
           <View className='cloud-row'>
-            <Text className='cloud-emoji'>{cloudUser.avatar}</Text>
+            {isAvatarUrl(cloudUser.avatar) ? (
+              <Image className='cloud-avatar-img' src={cloudUser.avatar} mode='aspectFill' />
+            ) : (
+              <Text className='cloud-emoji'>{cloudUser.avatar}</Text>
+            )}
             <View className='cloud-info'>
               <Text className='cloud-nickname'>{cloudUser.nickname}</Text>
               <Text className='cloud-id'>id: {cloudUser.id.slice(0, 12)}...</Text>

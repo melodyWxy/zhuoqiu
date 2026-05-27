@@ -65,6 +65,26 @@ UI：标题「为更好地为您服务，请授权使用您的手机号」
 
 `WECHAT_MP_APP_ID` / `WECHAT_MP_APP_SECRET` 任一为空 → WechatService 回落 mock，用 `mock_wx_<code prefix>` 拼伪 openId、`getPhoneNumber` 直接返回固定测试号 `+8613000000000`。开发环境零配置即可跑通，生产必须配真实 appId/secret。
 
+**3.1.4 wechat_profile 步骤（昵称 + 头像收集）**
+
+> 微信自 2022-10-25 起 `wx.getUserProfile` 不再返回真实昵称/头像，新建用户默认昵称都是 `微信用户`，赛事中无法区分。本步骤是官方推荐的「头像昵称填写能力」实现。
+
+```
+触发：wechatLogin 或 wechat_phone 完成后，user.nickname === '微信用户' || !user.nickname
+触发条件加 isWeapp() —— H5 没有 chooseAvatar 能力，跳过
+UI：
+  · 头像：<Button open-type="chooseAvatar" bindchooseavatar>，点击后选中的 wxfile 临时路径预览在按钮里
+  · 昵称：<Input type="nickname">，聚焦时微信键盘上方自动浮出"使用微信昵称"
+  · 主按钮"保存"：
+        ① wxfile 路径 → POST /me/avatar（multipart）→ 服务端返回 https URL
+        ② PATCH /me { nickname?, avatar? }
+        ③ store.setUser(merged) → finishLogin 关闭 sheet
+  · 次按钮"跳过"：保留 server 默认 '微信用户'，用户可在「我」页面再改
+```
+
+H5 / 已有真实昵称的用户（再次登录）不会进入此步骤。
+
+
 ### 3.2 H5
 
 ```
@@ -160,3 +180,4 @@ ensureWxPrivacyAuthorized(): Promise<boolean>       // weapp：getPrivacySetting
 |------|------|------|
 | v1.0 | 2026-05-27 | 初稿，对齐微信小程序合规要求；落地 LoginSheet privacy step + weapp 直登 |
 | v1.1 | 2026-05-27 | 服务端接真 wx code2session；新增 `/auth/wechat/phone` + 客户端 wechat_phone step（getPhoneNumber 收集手机号，用户可"稍后绑定"） |
+| v1.2 | 2026-05-27 | 新增 wechat_profile step（chooseAvatar + type=nickname），解决"参赛玩家昵称头像都一样无法区分"问题；服务端 `users.avatar` 列长度从 32 改为 512 容纳 URL；新增 `POST /me/avatar` 上传接口；UI 头像渲染按 URL/emoji 分支 |
