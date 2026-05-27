@@ -3,6 +3,8 @@ import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useState } from 'react'
 import { useEightBallStore } from '../../core/game/eightBallStore'
 import { useMatchStore } from '../../core/match/store'
+import { useAuthStore } from '../../core/auth/store'
+import { useUserStore } from '../../core/user/store'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
 import OnlineEightBall from './OnlineMode'
@@ -17,10 +19,14 @@ export default function EightBallPage() {
 
 function LocalEightBall() {
   const { players, targetWins, initGame, addWin, renamePlayer, clearGame } = useEightBallStore()
+  const cloudNickname = useAuthStore((s) => s.user?.nickname)
+  const localNickname = useUserStore((s) => s.nickname)
 
   useDidShow(() => {
     if (players.length === 0) {
-      initGame(['我', '对手'], 5)
+      // 已登录用云端昵称，未登录用本地昵称；落到本场比赛 state 内，长按改名只在房间内生效
+      const myName = cloudNickname || localNickname || '我'
+      initGame([myName, '对手'], 5)
     }
   })
 
