@@ -7,6 +7,14 @@ export const LEGAL_EFFECTIVE_DATE = '2026-05-27'
 export const LEGAL_OPERATOR = '击球帮'
 export const LEGAL_CONTACT_EMAIL = '18210711176@163.com'
 
+/**
+ * ICP 备案信息：备案通过后把 ICP_BEIAN 改成真实备案号即可（例：'沪ICP备2024XXXXXXX号-1'）。
+ * 留空字符串则前端不渲染备案行（备案审核期 / 海外发布场景）。
+ * MIIT 官网链接固定为 https://beian.miit.gov.cn/。
+ */
+export const ICP_BEIAN: string = '鲁ICP备2026023412号-1'
+export const ICP_MIIT_URL = 'https://beian.miit.gov.cn/'
+
 export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: '生效日期',
