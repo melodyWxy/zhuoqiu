@@ -15,6 +15,7 @@ import AvatarPickerModal from '../../components/AvatarPickerModal'
 import LoginSheet from '../../components/LoginSheet'
 import BindPhoneSheet from '../../components/BindPhoneSheet'
 import FeedbackModal from '../../components/FeedbackModal'
+import { ICP_BEIAN, ICP_MIIT_URL } from '../legal/content'
 import './index.scss'
 
 type CloudHistoryItem = MatchDetail & { durationMs?: number }
@@ -502,6 +503,28 @@ export default function MePage() {
           <Text>帮助与反馈</Text>
           <Text className='about-value'>→</Text>
         </View>
+        {ICP_BEIAN && (
+          <View
+            className='about-row about-icp'
+            onClick={async () => {
+              if (isWeapp()) {
+                // 小程序不能跳外链：复制工信部链接，让用户去浏览器打开
+                await Taro.setClipboardData({ data: ICP_MIIT_URL })
+                Taro.showToast({
+                  title: '工信部链接已复制，可在浏览器打开',
+                  icon: 'none',
+                  duration: 2500
+                })
+              } else if (typeof window !== 'undefined') {
+                // H5 直接开新窗口跳工信部
+                window.open(ICP_MIIT_URL, '_blank', 'noopener,noreferrer')
+              }
+            }}
+          >
+            <Text className='about-icp-num'>{ICP_BEIAN}</Text>
+            <Text className='about-icp-link'>工信部 →</Text>
+          </View>
+        )}
       </View>
 
       <InputModal
