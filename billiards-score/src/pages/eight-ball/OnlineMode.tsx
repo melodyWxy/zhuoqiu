@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
@@ -6,6 +6,16 @@ import { getMatchSocket, WsMessage } from '../../core/ws/socket'
 import { useAuthStore } from '../../core/auth/store'
 import MatchHistorySheet from '../../components/MatchHistorySheet'
 import ConnectionBanner from '../../components/ConnectionBanner'
+import { isAvatarUrl } from '../../utils/avatar'
+
+function PlayerAvatar({ avatar }: { avatar: string | null }) {
+  const v = avatar ?? ''
+  if (isAvatarUrl(v)) {
+    return <Image className='avatar-img' src={v} mode='aspectFill' />
+  }
+  // emoji 或空：空位也给个默认占位 emoji
+  return <Text className='avatar-emoji'>{v || '🧍'}</Text>
+}
 
 interface Props {
   matchId: string
@@ -229,7 +239,9 @@ export default function OnlineEightBall({ matchId }: Props) {
             className={`player-card ${selectedSlot === p.slot ? 'selected' : ''}`}
             onClick={() => handleCardClick(p.slot)}
           >
-            <View className='avatar'>🧍</View>
+            <View className='avatar'>
+              <PlayerAvatar avatar={p.avatar} />
+            </View>
             <Text className='name'>{p.displayName}</Text>
             <Text className='wins'>{wins[p.slot] ?? 0}</Text>
             <Text className='label'>胜</Text>

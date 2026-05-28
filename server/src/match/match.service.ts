@@ -159,7 +159,10 @@ export class MatchService {
     const match = await tx.match.findUnique({
       where: { id: matchId },
       include: {
-        players: { orderBy: [{ slot: 'asc' }, { joinedAt: 'asc' }] },
+        players: {
+          orderBy: [{ slot: 'asc' }, { joinedAt: 'asc' }],
+          include: { user: { select: { id: true, avatar: true } } }
+        },
         owner: { select: { id: true, nickname: true, avatar: true } }
       }
     })
@@ -209,6 +212,7 @@ export class MatchService {
         slot: p.slot,
         displayName: p.displayName,
         userId: p.userId,
+        avatar: p.user?.avatar ?? null,
         isCurrent: p.isCurrent,
         joinedAt: p.joinedAt,
         leftAt: p.leftAt

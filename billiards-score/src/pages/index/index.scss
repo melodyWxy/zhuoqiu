@@ -83,7 +83,7 @@
 
 .mini-card {
   flex: 1;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  background: linear-gradient(160deg, #3a5a48 0%, #1f3a2c 100%);
   border: 1.5px solid rgba(212, 175, 55, 0.35);
   border-radius: 12px;
   padding: 14px 12px;
@@ -96,6 +96,7 @@
   gap: 2px;
   min-height: 92px;
   justify-content: center;
+  box-shadow: var(--card-shadow);
 
   &:active {
     transform: scale(0.97);
@@ -142,15 +143,16 @@
   font-weight: bold;
 }
 
-/* 主卡（九球/中八） · 暖金边 */
+/* 主卡（九球/中八） · 暖金边 + 略带金色叠加 */
 .primary-card {
   border-color: var(--accent);
+  background: linear-gradient(160deg, #3f5a3a 0%, #2a4530 60%, rgba(212, 175, 55, 0.18) 100%);
 }
 
 /* 联机卡 */
 .join-card {
-  border-color: rgba(96, 165, 250, 0.5);
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.03));
+  border-color: rgba(96, 165, 250, 0.55);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.28) 0%, rgba(96, 165, 250, 0.08) 100%);
 }
 
 .join-card .mini-title { color: #93c5fd; }
@@ -158,12 +160,12 @@
 /* 发现球房 / 赛事 */
 .venues-card {
   border-style: dashed;
-  background: rgba(212, 175, 55, 0.05);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%);
 }
 
 .tournaments-card {
   border-style: dashed;
-  background: rgba(212, 175, 55, 0.09);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(212, 175, 55, 0.08) 100%);
 }
 
 /* 热门比赛 */
@@ -199,6 +201,7 @@
 
 .hot-item {
   background: var(--bg-card);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
   padding: 12px;
   display: flex;
@@ -206,6 +209,7 @@
   gap: 10px;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: var(--card-shadow);
 
   &:active { transform: scale(0.99); }
 }
