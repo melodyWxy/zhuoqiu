@@ -16,6 +16,8 @@ export interface MatchDetail {
     slot: number
     displayName: string
     userId: string | null
+    /** emoji（'🎱' / '🧍'）或 OSS URL；空位时为 null */
+    avatar: string | null
     isCurrent: boolean
     joinedAt: string
     leftAt: string | null

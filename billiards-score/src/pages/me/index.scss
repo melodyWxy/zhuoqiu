@@ -35,14 +35,15 @@
 
 /* 唯一身份卡（登录态/未登录态共用，靠内容差异区分） */
 .identity-card {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(212, 175, 55, 0.08) 60%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.5);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: var(--card-shadow);
 }
 
 .identity-row {
@@ -168,10 +169,12 @@
 }
 
 .section {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 14px;
+  box-shadow: var(--card-shadow);
 }
 
 .section-title {
@@ -237,7 +240,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: var(--bg-card);
+  background: var(--bg-card-strong);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
 }
 
@@ -299,6 +303,7 @@
 .item-time {
   font-size: 11px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .about-row {

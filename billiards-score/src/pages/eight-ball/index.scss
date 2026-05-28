@@ -33,18 +33,31 @@
   border: 2px solid transparent;
   transition: all 0.15s;
   cursor: pointer;
+  box-shadow: var(--card-shadow);
 
   &:active {
     transform: scale(0.97);
     border-color: var(--accent);
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
   }
 
   &.selected {
     border-color: var(--accent);
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, var(--bg-card) 100%);
-    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.45), var(--card-shadow);
   }
+}
+
+/* 每个号位不同主色 —— 与 --bg-dark 都有明显对比，且彼此可分辨 */
+.players-section .player-card:nth-child(1) {
+  background: linear-gradient(160deg, var(--slot-1) 0%, #15242e 100%);
+}
+.players-section .player-card:nth-child(2) {
+  background: linear-gradient(160deg, var(--slot-2) 0%, #261a2c 100%);
+}
+.players-section .player-card:nth-child(3) {
+  background: linear-gradient(160deg, var(--slot-3) 0%, #1d2616 100%);
+}
+.players-section .player-card:nth-child(4) {
+  background: linear-gradient(160deg, var(--slot-4) 0%, #2e1d18 100%);
 }
 
 .avatar {
@@ -57,6 +70,19 @@
   justify-content: center;
   margin: 0 auto 12px;
   font-size: 28px;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: block;
+}
+
+.avatar-emoji {
+  font-size: 28px;
+  line-height: 1;
 }
 
 .name {

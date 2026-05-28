@@ -1,11 +1,17 @@
-page {
+/* CSS 变量同时挂在 page（weapp 根） + :root（H5/web 根），保证 H5 上不丢色板 */
+page,
+:root {
   --primary: #1a2f23;
   --primary-light: #2d4a3a;
   --primary-dark: #0f1f17;
   --accent: #d4af37;
   --accent-light: #e8c967;
   --bg-dark: #0a0f0d;
-  --bg-card: #1a2520;
+  /* 卡片背景：比 v2.10 更亮一档，与 --bg-dark / --primary-dark 拉开对比 */
+  --bg-card: #1f2c26;
+  --bg-card-strong: #263730;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   --text-primary: #ffffff;
   --text-secondary: #a0a8a4;
   --text-muted: #6b7571;
@@ -13,7 +19,15 @@ page {
   --warning: #fbbf24;
   --error: #ef4444;
   --info: #60a5fa;
+  /* 玩家卡 slot 配色：与 --bg-dark 都有明显对比，保留台球桌深色基调 */
+  --slot-1: #1f3a4a; /* 冷蓝 */
+  --slot-2: #3a2840; /* 暖紫 */
+  --slot-3: #2f3d22; /* 苔绿 */
+  --slot-4: #4a2e26; /* 砖红 */
+}
 
+/* weapp：page 根节点本身承载底色与字号 */
+page {
   background-color: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
@@ -21,6 +35,13 @@ page {
   font-size: 32rpx;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* H5：page 选择器不命中任何元素，给 html/body 兜底深色背景 */
+html,
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
 }
 
 .container {

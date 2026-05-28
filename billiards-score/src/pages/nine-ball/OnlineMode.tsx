@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
@@ -6,12 +6,21 @@ import { getMatchSocket, closeMatchSocket, WsMessage } from '../../core/ws/socke
 import { useAuthStore } from '../../core/auth/store'
 import MatchHistorySheet from '../../components/MatchHistorySheet'
 import ConnectionBanner from '../../components/ConnectionBanner'
+import { isAvatarUrl } from '../../utils/avatar'
 
 interface Props {
   matchId: string
 }
 
 type WinKind = 'normal' | 'small' | 'big' | 'golden9'
+
+function PlayerAvatar({ avatar }: { avatar: string | null }) {
+  const v = avatar ?? ''
+  if (isAvatarUrl(v)) {
+    return <Image className='avatar-img' src={v} mode='aspectFill' />
+  }
+  return <Text className='avatar-emoji'>{v || '🧍'}</Text>
+}
 
 export default function OnlineNineBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
@@ -317,7 +326,9 @@ export default function OnlineNineBall({ matchId }: Props) {
             className={`player-card ${selectedSlot === p.slot ? 'selected' : ''}`}
             onClick={() => handleCardClick(p.slot)}
           >
-            <View className='avatar'>🧍</View>
+            <View className='avatar'>
+              <PlayerAvatar avatar={p.avatar} />
+            </View>
             <Text className='name'>{p.displayName}</Text>
             <Text className='position'>{p.slot}号位</Text>
             <Text className='score'>{scores[p.slot] ?? 0}</Text>

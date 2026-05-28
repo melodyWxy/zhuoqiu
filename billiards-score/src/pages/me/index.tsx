@@ -42,6 +42,14 @@ function formatTime(ts: number): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function formatDateTimeShort(ts: number | string | undefined | null): string {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return '—'
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function groupByDate(records: MatchRecord[]): { date: string; items: MatchRecord[] }[] {
   const groups: Record<string, MatchRecord[]> = {}
   const order: string[] = []
@@ -429,9 +437,7 @@ export default function MePage() {
                     <View className='item-score'>
                       <Text className='score-text'>{scores.join(' : ')}</Text>
                       <Text className='item-time'>
-                        {m.endedAt
-                          ? new Date(m.endedAt).toLocaleDateString() + ' ' + new Date(m.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : '—'}
+                        {formatDateTimeShort(m.endedAt)}
                       </Text>
                     </View>
                   </View>
