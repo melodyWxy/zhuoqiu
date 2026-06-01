@@ -54,16 +54,36 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   background: var(--bg-card);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0 12px;
   font-size: 14px;
   color: var(--text-primary);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
+
+  &.is-disabled {
+    opacity: var(--opacity-disabled);
+  }
+
+  &:active:not(.is-disabled) {
+    background: var(--bg-card-strong);
+  }
+}
+
+.vp-region-text {
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vp-region-arrow {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .vp-clear-btn {

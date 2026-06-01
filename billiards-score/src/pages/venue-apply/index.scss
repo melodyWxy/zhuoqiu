@@ -72,13 +72,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   background: var(--primary);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0 12px;
   font-size: 14px;
   color: var(--text-primary);
   text-align: center;
+
+  &.is-disabled {
+    opacity: var(--opacity-disabled);
+  }
+
+  &:active:not(.is-disabled) {
+    background: var(--primary-light);
+  }
+}
+
+.va-region-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.va-region-arrow {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 /* 上传 / 资质 */

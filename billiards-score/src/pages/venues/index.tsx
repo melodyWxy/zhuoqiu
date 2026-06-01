@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { venuesPublicApi, type VenuePublic } from '../../core/api/venue'
 import { useRegions } from '../../hooks/useRegions'
 import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import LoadingState from '../../components/LoadingState'
 import './index.scss'
 
 interface Filter {
@@ -117,8 +119,9 @@ export default function VenuesPage() {
             setFilter((s) => ({ ...s, province: p.name, city: '', district: '' }))
           }}
         >
-          <View className='vp-region-cell'>
-            {filter.province || '全国 ▾'}
+          <View className={`vp-region-cell${regionTree.length === 0 ? ' is-disabled' : ''}`}>
+            <Text className='vp-region-text'>{filter.province || '全国'}</Text>
+            <Text className='vp-region-arrow'>▾</Text>
           </View>
         </Picker>
         <Picker
@@ -132,8 +135,11 @@ export default function VenuesPage() {
             setFilter((s) => ({ ...s, city: c.name, district: '' }))
           }}
         >
-          <View className='vp-region-cell'>
-            {filter.city || (filter.province ? '全部市 ▾' : '市 ▾')}
+          <View className={`vp-region-cell${cityList.length === 0 ? ' is-disabled' : ''}`}>
+            <Text className='vp-region-text'>
+              {filter.city || (filter.province ? '全部市' : '市')}
+            </Text>
+            <Text className='vp-region-arrow'>▾</Text>
           </View>
         </Picker>
         <Picker
@@ -147,8 +153,11 @@ export default function VenuesPage() {
             setFilter((s) => ({ ...s, district: d.name }))
           }}
         >
-          <View className='vp-region-cell'>
-            {filter.district || (filter.city ? '全部区 ▾' : '区 ▾')}
+          <View className={`vp-region-cell${districtList.length === 0 ? ' is-disabled' : ''}`}>
+            <Text className='vp-region-text'>
+              {filter.district || (filter.city ? '全部区' : '区')}
+            </Text>
+            <Text className='vp-region-arrow'>▾</Text>
           </View>
         </Picker>
         {hasFilter && (
@@ -161,9 +170,23 @@ export default function VenuesPage() {
       <View className='vp-meta'>共 {total} 家球房</View>
 
       {loading ? (
-        <View className='vp-empty'>加载中…</View>
+        <LoadingState text='正在搜索球房' />
       ) : items.length === 0 ? (
-        <View className='vp-empty'>暂无球房</View>
+        hasFilter ? (
+          <EmptyState
+            icon='🔍'
+            title='没找到匹配的球房'
+            description='试试换个城市，或者清空筛选看看附近哪些已认证'
+            ctaText='清空筛选'
+            onCta={handleClear}
+          />
+        ) : (
+          <EmptyState
+            icon='🎱'
+            title='附近还没有认证球房'
+            description='可以让你常去的球房联系我们入驻'
+          />
+        )
       ) : (
         <View className='vp-list'>
           {items.map((v) => (

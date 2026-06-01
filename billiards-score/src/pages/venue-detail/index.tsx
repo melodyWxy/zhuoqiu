@@ -8,6 +8,8 @@ import {
   type VenuePublic
 } from '../../core/api/venue'
 import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import LoadingState from '../../components/LoadingState'
 import './index.scss'
 
 const DAY_LABEL: Record<string, string> = {
@@ -81,10 +83,16 @@ export default function VenueDetailPage() {
   }
 
   if (loading) {
-    return <View className='vd-empty'>加载中…</View>
+    return <LoadingState text='正在加载球房' />
   }
   if (error || !venue) {
-    return <View className='vd-empty'>{error ?? '球房不存在'}</View>
+    return (
+      <EmptyState
+        icon='⚠️'
+        title='球房不存在'
+        description={error ?? '可能链接已失效，回到球房列表换一个吧'}
+      />
+    )
   }
 
   const hours = venue.openHoursJson ?? {}

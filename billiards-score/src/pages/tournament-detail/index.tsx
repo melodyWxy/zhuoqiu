@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
 import PageHeader from '../../components/PageHeader'
+import LoadingState from '../../components/LoadingState'
 import './index.scss'
 
 const STATUS_LABEL: Record<string, { text: string; color: string }> = {
@@ -135,7 +136,7 @@ export default function TournamentDetailPage() {
   }
 
   if (loading || !t) {
-    return <View className='td-empty'>加载中…</View>
+    return <LoadingState text='正在加载赛事' />
   }
 
   const status = t.status
@@ -301,7 +302,7 @@ export default function TournamentDetailPage() {
       return (
         <View className='td-card'>
           <Text className='td-section'>赛程</Text>
-          <Text className='td-notice'>加载中…</Text>
+          <LoadingState text='正在加载赛程' variant='inline' />
         </View>
       )
     }

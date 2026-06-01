@@ -3,6 +3,8 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
+import LoadingState from '../../components/LoadingState'
+import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
 const EVENT_LABEL: Record<string, string> = {
@@ -55,10 +57,10 @@ export default function MatchDetailPage() {
   }, [matchId])
 
   if (!matchId) {
-    return <View style={{ padding: 40 }}>参数错误</View>
+    return <EmptyState icon='⚠️' title='参数错误' description='缺少 match id，请从历史记录里重新进入' />
   }
   if (loading || !detail) {
-    return <View style={{ padding: 40, textAlign: 'center', color: '#a0a8a4' }}>加载中…</View>
+    return <LoadingState text='正在加载比赛' />
   }
 
   const players = detail.players.filter((p) => p.isCurrent).sort((a, b) => a.slot - b.slot)

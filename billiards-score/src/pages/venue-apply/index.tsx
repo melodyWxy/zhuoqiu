@@ -11,6 +11,7 @@ import {
 } from '../../core/api/venue'
 import { useRegions } from '../../hooks/useRegions'
 import PageHeader from '../../components/PageHeader'
+import LoadingState from '../../components/LoadingState'
 import './index.scss'
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -177,7 +178,7 @@ export default function VenueApplyPage() {
   }
 
   if (loading) {
-    return <View className='va-loading'>加载中…</View>
+    return <LoadingState text='正在加载入驻信息' />
   }
 
   // 已绑定 venue → 入驻成功页
@@ -320,8 +321,11 @@ export default function VenueApplyPage() {
               }))
             }}
           >
-            <View className='va-region-cell'>
-              {form.province || (regionsLoading ? '加载中…' : '请选择省份')}
+            <View className={`va-region-cell${regionsLoading || regionTree.length === 0 ? ' is-disabled' : ''}`}>
+              <Text className='va-region-text'>
+                {form.province || (regionsLoading ? '加载中' : '省份')}
+              </Text>
+              <Text className='va-region-arrow'>▾</Text>
             </View>
           </Picker>
           <Picker
@@ -335,8 +339,11 @@ export default function VenueApplyPage() {
               setForm((s) => ({ ...s, city: c.name, district: '' }))
             }}
           >
-            <View className='va-region-cell'>
-              {form.city || (form.province ? '请选择市' : '市')}
+            <View className={`va-region-cell${cityList.length === 0 ? ' is-disabled' : ''}`}>
+              <Text className='va-region-text'>
+                {form.city || (form.province ? '市' : '市')}
+              </Text>
+              <Text className='va-region-arrow'>▾</Text>
             </View>
           </Picker>
           <Picker
@@ -350,8 +357,11 @@ export default function VenueApplyPage() {
               setForm((s) => ({ ...s, district: d.name }))
             }}
           >
-            <View className='va-region-cell'>
-              {form.district || (form.city ? '请选择区/县' : '区/县')}
+            <View className={`va-region-cell${districtList.length === 0 ? ' is-disabled' : ''}`}>
+              <Text className='va-region-text'>
+                {form.district || (form.city ? '区/县' : '区/县')}
+              </Text>
+              <Text className='va-region-arrow'>▾</Text>
             </View>
           </Picker>
         </View>
