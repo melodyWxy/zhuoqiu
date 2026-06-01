@@ -94,7 +94,7 @@
 
 .vp-card {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   gap: 12px;

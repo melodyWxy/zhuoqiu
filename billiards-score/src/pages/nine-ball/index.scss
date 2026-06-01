@@ -213,7 +213,7 @@
   transition: transform 0.1s, opacity 0.15s;
 
   &:active { transform: scale(0.97); }
-  &.is-disabled { opacity: 0.4; cursor: not-allowed; }
+  &.is-disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 
   &.win-normal {
     background: rgba(74, 222, 128, 0.15);

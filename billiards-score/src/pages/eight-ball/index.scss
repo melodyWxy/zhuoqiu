@@ -223,7 +223,7 @@
   transition: transform 0.1s, opacity 0.15s;
 
   &:active { transform: scale(0.97); }
-  &.is-disabled { opacity: 0.4; cursor: not-allowed; }
+  &.is-disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 
   &.op-win {
     background: var(--success);
