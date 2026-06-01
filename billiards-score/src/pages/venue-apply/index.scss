@@ -39,16 +39,22 @@
 }
 
 .va-field {
+  /* 触达 ≥44px：用 height 不堆 padding */
+  height: 48px;
+  box-sizing: border-box;
   background: var(--primary);
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 0 12px;
   font-size: 15px;
   color: var(--text-primary);
 }
 
 .va-textarea {
-  min-height: 60px;
+  /* textarea 不固定 height，让内容撑开；padding 给 10/12 让多行不贴边 */
+  min-height: 88px;
+  height: auto;
+  padding: 10px 12px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -60,10 +66,16 @@
 
 .va-region-cell {
   flex: 1;
+  /* 与 va-field 同档；省市区横排齐高 */
+  height: 48px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--primary);
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 0 12px;
   font-size: 14px;
   color: var(--text-primary);
   text-align: center;

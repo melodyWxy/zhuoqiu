@@ -15,16 +15,20 @@
 
 .vp-search-input {
   flex: 1;
+  /* 用 height 而不是堆 padding —— weapp 上 padding 会让 placeholder 偏移 */
+  height: 44px;
+  box-sizing: border-box;
   background: var(--bg-card);
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 0 14px;
   font-size: 14px;
   color: var(--text-primary);
 }
 
 .vp-search-btn {
-  padding: 0 16px;
+  height: 44px;
+  padding: 0 18px;
   background: var(--accent);
   color: var(--primary-dark);
   border-radius: 10px;
@@ -44,11 +48,17 @@
 
 .vp-region-cell {
   flex: 1;
+  /* 触达 ≥44px：与 vp-search-input 同档，之前 padding 8 + 13px 字号高仅 ≈32px */
+  height: 44px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-card);
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
+  padding: 0 12px;
+  font-size: 14px;
   color: var(--text-primary);
   text-align: center;
   white-space: nowrap;
@@ -57,9 +67,9 @@
 }
 
 .vp-clear-btn {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--accent);
-  padding: 6px 8px;
+  padding: 10px 12px;
   &:active { opacity: 0.7; }
 }
 
