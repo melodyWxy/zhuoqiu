@@ -146,8 +146,8 @@
 
   /* 观众按钮 —— 蓝色实色，清晰可见不抢主按钮焦点 */
   &.watch {
-    background: #3b82f6;
-    color: #ffffff;
+    background: var(--info-deep);
+    color: var(--text-primary);
     border: none;
     font-weight: 500;
   }

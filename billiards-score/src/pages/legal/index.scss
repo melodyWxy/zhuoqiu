@@ -1,7 +1,7 @@
 .legal-page {
   min-height: 100vh;
-  background: #0a0f0d;
-  color: #e6ece8;
+  background: var(--bg-dark);
+  color: var(--text-primary);
   padding: 16px;
 }
 
@@ -13,13 +13,13 @@
 .legal-header {
   font-size: 20px;
   font-weight: 700;
-  color: #d4af37;
+  color: var(--accent);
   margin-bottom: 4px;
 }
 
 .legal-subheader {
   font-size: 12px;
-  color: #a0a8a4;
+  color: var(--text-secondary);
   margin-bottom: 20px;
 }
 
@@ -31,7 +31,7 @@
   display: block;
   font-size: 15px;
   font-weight: 600;
-  color: #d4af37;
+  color: var(--accent);
   margin-bottom: 8px;
 }
 
@@ -39,16 +39,17 @@
   display: block;
   font-size: 14px;
   line-height: 1.7;
-  color: #d2d8d4;
+  color: var(--text-primary);
   margin-bottom: 6px;
   word-break: break-word;
+  opacity: 0.92;
 }
 
 .legal-footer {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--card-border);
   font-size: 12px;
-  color: #a0a8a4;
+  color: var(--text-secondary);
   text-align: center;
 }

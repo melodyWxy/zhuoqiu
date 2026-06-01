@@ -21,6 +21,13 @@ export default defineAppConfig({
    * 多出来的左右区域显示页面深色背景。
    */
   resizable: true,
+  /* 顶栏 / tabBar 的 hex 必须与 styles/global.scss 的 token 保持同步：
+   *   #1a2f23 → --primary
+   *   #0a0f0d → --bg-dark / --primary-dark
+   *   #a0a8a4 → --text-secondary
+   *   #d4af37 → --accent
+   * weapp app.json 不接 CSS 变量，只能写字面量；改 token 时这里要一起改。
+   */
   window: {
     navigationBarTitleText: '击球帮',
     navigationBarBackgroundColor: '#1a2f23',

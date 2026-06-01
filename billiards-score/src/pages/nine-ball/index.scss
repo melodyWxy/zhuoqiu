@@ -231,7 +231,7 @@
     border-color: var(--accent);
   }
   &.win-golden9 {
-    background: linear-gradient(135deg, #f5d76e 0%, var(--accent) 100%);
+    background: linear-gradient(135deg, var(--accent-bright) 0%, var(--accent) 100%);
     color: var(--primary-dark);
     border-color: transparent;
   }

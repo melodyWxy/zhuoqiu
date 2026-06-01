@@ -133,8 +133,8 @@
   padding: 3px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--primary-dark, #0a0f0d);
-  background: var(--accent, #d4af37);
+  color: var(--primary-dark);
+  background: var(--accent);
   border-radius: 999px;
   cursor: pointer;
 
@@ -402,7 +402,7 @@
 .venue-mode-logout {
   padding: 10px 14px;
   background: rgba(239, 68, 68, 0.12);
-  color: var(--error, #ef4444);
+  color: var(--error);
   border: 1px solid rgba(239, 68, 68, 0.5);
   border-radius: 8px;
   text-align: center;

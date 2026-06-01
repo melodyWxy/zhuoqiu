@@ -20,6 +20,11 @@
   --warning: #fbbf24;
   --error: #ef4444;
   --info: #60a5fa;
+  --info-deep: #3b82f6;   /* 联机观众按钮等饱和蓝 */
+  --info-light: #93c5fd;  /* 联机标题浅蓝 */
+  --accent-bright: #f5d76e; /* 九球金球渐变高光 */
+  /* 页面 wrapper 背景：比 --bg-dark 略偏冷，给浮于其上的卡片留对比 */
+  --bg-page: #0d1013;
   /* 玩家卡 slot 配色：与 --bg-dark 都有明显对比，保留台球桌深色基调 */
   --slot-1: #1f3a4a; /* 冷蓝 */
   --slot-2: #3a2840; /* 暖紫 */

@@ -12,11 +12,11 @@
 .input-modal-box {
   width: 100%;
   max-width: 320px;
-  background: #1a2f23;
+  background: var(--primary);
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 14px;
   padding: 22px 20px 16px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .input-modal-title {
@@ -32,7 +32,7 @@
   height: 48px;
   padding: 0 14px;
   font-size: 16px;
-  color: #fff;
+  color: var(--text-primary);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 8px;
@@ -56,14 +56,14 @@
 
   &.cancel {
     background: rgba(255, 255, 255, 0.08);
-    color: #a0a8a4;
+    color: var(--text-secondary);
 
     &:active { background: rgba(255, 255, 255, 0.15); }
   }
 
   &.confirm {
-    background: #d4af37;
-    color: #0a0f0d;
+    background: var(--accent);
+    color: var(--primary-dark);
 
     &:active { opacity: 0.85; }
   }
