@@ -16,6 +16,15 @@ export class UpdateVenueDto {
   @IsOptional() @IsString() @Length(2, 128)
   name?: string
 
+  @IsOptional() @IsString() @Length(2, 32)
+  province?: string
+
+  @IsOptional() @IsString() @Length(2, 32)
+  city?: string
+
+  @IsOptional() @IsString() @Length(2, 32)
+  district?: string
+
   @IsOptional() @IsString() @Length(2, 255)
   address?: string
 

@@ -10,7 +10,7 @@ import {
   UseGuards
 } from '@nestjs/common'
 import { Type } from 'class-transformer'
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
 import { VenueService } from './venue.service'
 import { UpdateVenueDto } from './dto/venue-update.dto'
 import { VenueAuthGuard } from './venue-auth.guard'
@@ -21,6 +21,21 @@ import { VenueAccountJwtPayload } from '../auth/jwt-payload'
 class ListVenuesQueryDto {
   @IsOptional() @IsString()
   keyword?: string
+
+  @IsOptional() @IsString()
+  province?: string
+
+  @IsOptional() @IsString()
+  city?: string
+
+  @IsOptional() @IsString()
+  district?: string
+
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-90) @Max(90)
+  lat?: number
+
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-180) @Max(180)
+  lng?: number
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   page: number = 1
@@ -42,6 +57,11 @@ export class VenueController {
   async list(@Query() q: ListVenuesQueryDto) {
     return this.service.listPublic({
       keyword: q.keyword,
+      province: q.province,
+      city: q.city,
+      district: q.district,
+      lat: q.lat,
+      lng: q.lng,
       page: q.page,
       pageSize: q.pageSize
     })
@@ -65,6 +85,9 @@ export class VenueController {
       : undefined
     const venue = await this.service.updateOwnVenue(jwt.sub, {
       name: dto.name,
+      province: dto.province,
+      city: dto.city,
+      district: dto.district,
       address: dto.address,
       phone: dto.phone,
       coverImage: dto.coverImage,

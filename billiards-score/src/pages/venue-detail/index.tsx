@@ -69,9 +69,13 @@ export default function VenueDetailPage() {
     })
   }
 
+  const fullAddress = venue
+    ? `${venue.province ?? ''}${venue.city ?? ''}${venue.district ?? ''}${venue.address}`
+    : ''
+
   const handleCopyAddress = () => {
     if (!venue) return
-    Taro.setClipboardData({ data: venue.address }).then(() =>
+    Taro.setClipboardData({ data: fullAddress }).then(() =>
       Taro.showToast({ title: '地址已复制', icon: 'none' })
     )
   }
@@ -110,7 +114,7 @@ export default function VenueDetailPage() {
         </View>
         <View className='vd-meta-row' onClick={handleCopyAddress}>
           <Text className='vd-icon'>📍</Text>
-          <Text className='vd-meta-text'>{venue.address}</Text>
+          <Text className='vd-meta-text'>{fullAddress}</Text>
         </View>
         <View className='vd-meta-row' onClick={handleCall}>
           <Text className='vd-icon'>☎️</Text>

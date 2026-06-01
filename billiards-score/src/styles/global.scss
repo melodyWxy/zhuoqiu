@@ -1,6 +1,7 @@
-/* CSS 变量同时挂在 page（weapp 根） + :root（H5/web 根），保证 H5 上不丢色板 */
-page,
-:root {
+/* SCSS mixin：把色板 var 一次性铺到一个选择器上。
+   weapp 和 H5 各用自己的根选择器去 include，避免 `page, :root` 这种复合
+   选择器在 weapp WXSS 解析器里被整条丢掉。 */
+@mixin color-tokens {
   --primary: #1a2f23;
   --primary-light: #2d4a3a;
   --primary-dark: #0f1f17;
@@ -26,22 +27,35 @@ page,
   --slot-4: #4a2e26; /* 砖红 */
 }
 
-/* weapp：page 根节点本身承载底色与字号 */
+/* weapp 根：page 是 wxss 的根伪元素。
+   平板 / 折叠屏 resizable=true 时窗口会撑满全屏，max-width 把内容压到手机宽度
+   居中显示，两侧露出 page 自身深色背景。 */
 page {
+  @include color-tokens;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
-
   font-size: 32rpx;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* H5：page 选择器不命中任何元素，给 html/body 兜底深色背景 */
-html,
+/* H5 根：body 挂变量 + 背景色，桌面浏览器同样限宽居中。
+   html 兜底背景，避免 body 居中后两侧露出浏览器默认白色。 */
+html {
+  background-color: #0a0f0d;
+}
+
 body {
+  @include color-tokens;
   background-color: var(--bg-dark);
   color: var(--text-primary);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .container {

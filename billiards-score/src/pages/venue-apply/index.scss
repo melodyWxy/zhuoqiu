@@ -53,6 +53,22 @@
   box-sizing: border-box;
 }
 
+.va-region-row {
+  display: flex;
+  gap: 8px;
+}
+
+.va-region-cell {
+  flex: 1;
+  background: var(--primary);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: center;
+}
+
 /* 上传 / 资质 */
 .va-btn-upload {
   width: 100%;

@@ -216,7 +216,9 @@ export default function TournamentDetailPage() {
         >
           <Text className='td-section'>主办球房</Text>
           <Text className='td-venue-name'>{t.venue.name} →</Text>
-          <Text className='td-venue-addr'>📍 {t.venue.address}</Text>
+          <Text className='td-venue-addr'>
+            📍 {`${t.venue.province ?? ''}${t.venue.city ?? ''}${t.venue.district ?? ''}${t.venue.address}`}
+          </Text>
         </View>
       )}
     </View>

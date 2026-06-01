@@ -7,6 +7,9 @@ export interface VenueApplicationPayload {
   name: string
   contactName: string
   contactPhone: string
+  province: string
+  city: string
+  district: string
   address: string
   tablesCount: number
   openHours: Array<{ day: string; hours: string }>
@@ -41,6 +44,9 @@ export interface VenueMe {
   venue: {
     id: string
     name: string
+    province: string | null
+    city: string | null
+    district: string | null
     address: string
     status: string
     tablesCount: number
@@ -83,7 +89,12 @@ export interface VenuePublic {
   id: string
   name: string
   slug: string | null
+  province: string | null
+  city: string | null
+  district: string | null
   address: string
+  lat: number | null
+  lng: number | null
   phone: string
   coverImage: string | null
   tablesCount: number
@@ -93,11 +104,35 @@ export interface VenuePublic {
   createdAt: string
 }
 
+export interface RegionNode {
+  code: string
+  name: string
+  children?: RegionNode[]
+}
+
+export const regionsApi = {
+  /** 全国省/市/区树。服务端缓存 24h，客户端建议本地再缓存 7 天。 */
+  list: () =>
+    callApi<{ tree: RegionNode[] }>('/regions', { auth: false, toast: false })
+}
+
 /** 公共球房发现接口，匿名可访问 */
 export const venuesPublicApi = {
-  list: (params: { keyword?: string; page?: number; pageSize?: number } = {}) => {
+  list: (
+    params: {
+      keyword?: string
+      province?: string
+      city?: string
+      district?: string
+      page?: number
+      pageSize?: number
+    } = {}
+  ) => {
     const q = new URLSearchParams()
     if (params.keyword) q.set('keyword', params.keyword)
+    if (params.province) q.set('province', params.province)
+    if (params.city) q.set('city', params.city)
+    if (params.district) q.set('district', params.district)
     if (params.page) q.set('page', String(params.page))
     if (params.pageSize) q.set('pageSize', String(params.pageSize))
     const qs = q.toString()
@@ -151,6 +186,9 @@ export interface TournamentDetailPublic extends TournamentItem {
   venue: {
     id: string
     name: string
+    province: string | null
+    city: string | null
+    district: string | null
     address: string
     coverImage: string | null
   } | null
@@ -290,91 +328,39 @@ export const venueApplicationApi = {
     )
 }
 
-interface StsToken {
-  region: string
-  bucket: string
-  endpoint: string | null
-  accessKeyId: string
-  accessKeySecret: string
-  securityToken: string
-  expiration: string
-  objectKeyPrefix: string
-  expiresInSec: number
-}
-
-let cachedToken: (StsToken & { category: string; expireAt: number }) | null = null
-
-async function fetchStsToken(category: string, accessToken: string): Promise<StsToken> {
-  const now = Date.now()
-  if (
-    cachedToken &&
-    cachedToken.category === category &&
-    cachedToken.expireAt - now > 60_000
-  ) {
-    return cachedToken
-  }
-  const r = await Taro.request<{ code: number; data?: StsToken; message?: string }>({
-    url: `${API_BASE_URL}/uploads/sts-token?category=${encodeURIComponent(category)}`,
-    method: 'GET',
-    header: { Authorization: `Bearer ${accessToken}` }
-  })
-  if (r.statusCode !== 200 || r.data.code !== 0 || !r.data.data) {
-    throw new Error(r.data.message ?? '获取上传凭证失败')
-  }
-  const tok = r.data.data
-  cachedToken = {
-    ...tok,
-    category,
-    expireAt: new Date(tok.expiration).getTime()
-  }
-  return tok
-}
-
-function extOfPath(path: string): string {
-  const slashed = path.split('?')[0]
-  const i = slashed.lastIndexOf('.')
-  return i >= 0 ? slashed.slice(i).toLowerCase() : ''
-}
-
-function randomHex(len = 16): string {
-  const arr = new Uint8Array(len)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(arr)
-  } else {
-    for (let i = 0; i < len; i++) arr[i] = Math.floor(Math.random() * 256)
-  }
-  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 /**
- * H5 端文件直传 OSS：
- *   1) GET /uploads/sts-token 拿 900s 临时凭证
- *   2) 从 Taro.chooseImage 给的 blob: / 本地路径 fetch 出 Blob
- *   3) 用 ali-oss JS SDK put 到 {prefix}/{random}{ext}
- *
- * 非 H5 端（小程序）暂不支持（要用 uni-upload 或自己签名 formAliyun）。
+ * 商家文件上传：H5 + 小程序统一走 `Taro.uploadFile` multipart 推服务端，
+ * 服务端 OSS_ENABLED=true 时再代理推 OSS（避免 c 端引入 2.6MB 的 ali-oss SDK
+ * 把 weapp 主包撑爆 2MB 上限）。
  */
 export async function uploadVenueFile(
   filePath: string,
   category: string,
   token: string
 ): Promise<{ url: string; path: string }> {
-  if (typeof window === 'undefined' || typeof fetch === 'undefined') {
-    throw new Error('当前环境暂不支持 OSS 直传（小程序端待接入）')
-  }
-  const sts = await fetchStsToken(category, token)
-  const blob = await fetch(filePath).then((r) => r.blob())
-  const OSS = (await import('ali-oss')).default
-  const client = new OSS({
-    region: sts.region,
-    accessKeyId: sts.accessKeyId,
-    accessKeySecret: sts.accessKeySecret,
-    stsToken: sts.securityToken,
-    bucket: sts.bucket,
-    endpoint: sts.endpoint ?? undefined,
-    secure: true
+  return new Promise((resolve, reject) => {
+    Taro.uploadFile({
+      url: `${API_BASE_URL}/uploads?category=${encodeURIComponent(category)}`,
+      filePath,
+      name: 'file',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res) => {
+        try {
+          const body = JSON.parse(res.data) as {
+            code: number
+            data?: { url: string; path: string }
+            message?: string
+          }
+          if (res.statusCode !== 200 || body.code !== 0 || !body.data) {
+            reject(new Error(body.message ?? `上传失败 ${res.statusCode}`))
+            return
+          }
+          resolve({ url: body.data.url, path: body.data.path })
+        } catch {
+          reject(new Error('上传响应解析失败'))
+        }
+      },
+      fail: (err) => reject(new Error(err.errMsg ?? '上传失败'))
+    })
   })
-  const objectKey = `${sts.objectKeyPrefix}/${randomHex()}${extOfPath(filePath) || '.jpg'}`
-  const res = await client.put(objectKey, blob)
-  return { url: res.url, path: objectKey }
 }

@@ -174,7 +174,7 @@ export default function ApplyStatus() {
                 {app.payloadJson.contactPhone}
               </Descriptions.Item>
               <Descriptions.Item label="地址" span={2}>
-                {app.payloadJson.address}
+                {`${app.payloadJson.province ?? ''}${app.payloadJson.city ?? ''}${app.payloadJson.district ?? ''}${app.payloadJson.address}`}
               </Descriptions.Item>
               <Descriptions.Item label="提交时间" span={2}>
                 {dayjs(app.createdAt).format('YYYY-MM-DD HH:mm:ss')}

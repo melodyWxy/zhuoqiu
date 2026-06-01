@@ -15,6 +15,12 @@ export default defineAppConfig({
     'pages/tournament-detail/index',
     'pages/legal/index'
   ],
+  /**
+   * 平板 / 折叠屏 / iPad 上不再走默认的「居中固定手机框」兼容模式，
+   * 改为撑满全屏；UI 侧再用 page max-width 把内容卡在手机宽度居中，
+   * 多出来的左右区域显示页面深色背景。
+   */
+  resizable: true,
   window: {
     navigationBarTitleText: '击球帮',
     navigationBarBackgroundColor: '#1a2f23',

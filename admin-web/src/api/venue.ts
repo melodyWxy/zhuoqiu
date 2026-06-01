@@ -48,6 +48,9 @@ export const venueAuthApi = {
         venue: {
           id: string
           name: string
+          province: string | null
+          city: string | null
+          district: string | null
           address: string
           status: string
           tablesCount: number
@@ -84,7 +87,12 @@ export interface VenuePublic {
   id: string
   name: string
   slug: string | null
+  province: string | null
+  city: string | null
+  district: string | null
   address: string
+  lat: number | null
+  lng: number | null
   phone: string
   coverImage: string | null
   tablesCount: number
@@ -96,6 +104,9 @@ export interface VenuePublic {
 
 export interface UpdateVenuePayload {
   name?: string
+  province?: string
+  city?: string
+  district?: string
   address?: string
   phone?: string
   coverImage?: string | null

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
+import { GeoModule } from '../geo/geo.module'
 import { VenueAuthController } from './venue-auth.controller'
 import { VenueApplicationController } from './venue-application.controller'
 import { VenueApplicationAdminController } from './venue-admin.controller'
@@ -16,7 +17,7 @@ import {
 } from './tournament-public.controller'
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, GeoModule],
   controllers: [
     VenueAuthController,
     VenueApplicationController,

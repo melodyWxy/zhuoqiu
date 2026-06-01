@@ -3,6 +3,7 @@ import {
   App,
   Button,
   Card,
+  Cascader,
   Form,
   Image,
   Input,
@@ -21,12 +22,16 @@ import {
   venueAuthApi,
   venueMyApi
 } from '../../api/venue'
+import { regionsApi } from '../../api/venues'
+import type { RegionNode } from '../../api/venues'
 import { venueHttp } from '../../api/venue-client'
 
 const { Title, Paragraph } = Typography
 
 interface FormValues {
   name: string
+  /** Cascader 值 [省, 市, 区] */
+  region: [string, string, string]
   address: string
   phone: string
   tablesCount: number
@@ -37,12 +42,30 @@ interface FormValues {
 interface VenueSnapshot {
   id: string
   name: string
+  province: string | null
+  city: string | null
+  district: string | null
   address: string
   phone: string
   coverImage: string | null
   tablesCount: number
   openHoursJson: Record<string, string> | null
   description: string | null
+}
+
+/** RegionNode[] → antd Cascader options，value 用 name 直接落库 */
+function toCascaderOptions(tree: RegionNode[]) {
+  return tree.map((p) => ({
+    value: p.name,
+    label: p.name,
+    children:
+      p.children?.map((c) => ({
+        value: c.name,
+        label: c.name,
+        children:
+          c.children?.map((d) => ({ value: d.name, label: d.name })) ?? []
+      })) ?? []
+  }))
 }
 
 export default function Profile() {
@@ -55,6 +78,22 @@ export default function Profile() {
   const [coverFile, setCoverFile] = useState<UploadFile | null>(null)
   const [uploading, setUploading] = useState(false)
   const [venueId, setVenueId] = useState<string | null>(null)
+  const [regionTree, setRegionTree] = useState<RegionNode[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await regionsApi.list()
+        if (!cancelled) setRegionTree(r.tree)
+      } catch {
+        // 拦截器已提示
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     ;(async () => {
@@ -86,8 +125,15 @@ export default function Profile() {
         }
         const hoursMon =
           full.openHoursJson?.mon ?? Object.values(full.openHoursJson ?? {})[0] ?? ''
+        // 历史 venue 可能 province/district = null（回填脚本只补 city），
+        // 这种情况 region 给空数组，让 Cascader 显示 placeholder 强制商家选一次
+        const region: [string, string, string] | [] =
+          full.province && full.city && full.district
+            ? [full.province, full.city, full.district]
+            : []
         form.setFieldsValue({
           name: full.name,
+          region: region as [string, string, string],
           address: full.address,
           phone: full.phone,
           tablesCount: full.tablesCount,
@@ -135,6 +181,11 @@ export default function Profile() {
   }
 
   const onFinish = async (v: FormValues) => {
+    if (!v.region || v.region.length !== 3) {
+      message.warning('请选择完整的省 / 市 / 区')
+      return
+    }
+    const [province, city, district] = v.region
     const openHours = [
       'mon',
       'tue',
@@ -148,6 +199,9 @@ export default function Profile() {
     try {
       await venueMyApi.update({
         name: v.name,
+        province,
+        city,
+        district,
         address: v.address,
         phone: v.phone,
         tablesCount: v.tablesCount,
@@ -197,11 +251,38 @@ export default function Profile() {
             <Input />
           </Form.Item>
           <Form.Item
+            label="所在地区"
+            name="region"
+            rules={[
+              {
+                required: true,
+                message: '请选择省 / 市 / 区',
+                type: 'array',
+                len: 3
+              }
+            ]}
+          >
+            <Cascader
+              options={toCascaderOptions(regionTree)}
+              placeholder={
+                regionTree.length === 0 ? '加载行政区划中…' : '选择省 / 市 / 区'
+              }
+              showSearch={{
+                filter: (input, path) =>
+                  path.some((opt) =>
+                    String(opt.label).toLowerCase().includes(input.toLowerCase())
+                  )
+              }}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item
             label="详细地址"
             name="address"
             rules={[{ required: true, min: 2, max: 255 }]}
+            tooltip="不用重复省市区，只填街道及门牌号"
           >
-            <Input.TextArea rows={2} />
+            <Input.TextArea rows={2} placeholder="xx 路 88 号 3 层" />
           </Form.Item>
           <Form.Item
             label="联系电话"

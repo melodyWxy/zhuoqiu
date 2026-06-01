@@ -1,6 +1,6 @@
-import { View, Text, Input, Textarea, Button, Image } from '@tarojs/components'
+import { View, Text, Input, Textarea, Button, Image, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../../core/auth/store'
 import {
   uploadVenueFile,
@@ -9,6 +9,7 @@ import {
   type VenueApplicationItem,
   type VenueMe
 } from '../../core/api/venue'
+import { useRegions } from '../../hooks/useRegions'
 import PageHeader from '../../components/PageHeader'
 import './index.scss'
 
@@ -18,6 +19,9 @@ interface FormState {
   name: string
   contactName: string
   contactPhone: string
+  province: string
+  city: string
+  district: string
   address: string
   tablesCount: string
   hours: string
@@ -39,11 +43,22 @@ export default function VenueApplyPage() {
     name: '',
     contactName: '',
     contactPhone: venueSession?.account.phoneNumber ?? '',
+    province: '',
+    city: '',
+    district: '',
     address: '',
     tablesCount: '8',
     hours: '10:00-02:00',
     description: ''
   })
+  const { tree: regionTree, loading: regionsLoading } = useRegions()
+
+  const cityList = useMemo(() => {
+    return regionTree.find((p) => p.name === form.province)?.children ?? []
+  }, [regionTree, form.province])
+  const districtList = useMemo(() => {
+    return cityList.find((c) => c.name === form.city)?.children ?? []
+  }, [cityList, form.city])
 
   useEffect(() => {
     if (!venueSession) {
@@ -71,6 +86,9 @@ export default function VenueApplyPage() {
             name: p.name,
             contactName: p.contactName,
             contactPhone: p.contactPhone,
+            province: p.province ?? '',
+            city: p.city ?? '',
+            district: p.district ?? '',
             address: p.address,
             tablesCount: String(p.tablesCount),
             hours: p.openHours?.[0]?.hours ?? '10:00-02:00',
@@ -114,8 +132,10 @@ export default function VenueApplyPage() {
       return Taro.showToast({ title: '请填联系人', icon: 'none' })
     if (!/^\+?\d{8,15}$/.test(form.contactPhone))
       return Taro.showToast({ title: '联系电话格式不对', icon: 'none' })
+    if (!form.province || !form.city || !form.district)
+      return Taro.showToast({ title: '请选择省 / 市 / 区', icon: 'none' })
     if (!form.address.trim())
-      return Taro.showToast({ title: '请填地址', icon: 'none' })
+      return Taro.showToast({ title: '请填详细地址', icon: 'none' })
     const tables = parseInt(form.tablesCount, 10)
     if (!tables || tables < 1)
       return Taro.showToast({ title: '台桌数不对', icon: 'none' })
@@ -129,6 +149,9 @@ export default function VenueApplyPage() {
           name: form.name,
           contactName: form.contactName,
           contactPhone: form.contactPhone,
+          province: form.province,
+          city: form.city,
+          district: form.district,
           address: form.address,
           tablesCount: tables,
           openHours: DAYS.map((d) => ({ day: d, hours: form.hours })),
@@ -159,21 +182,23 @@ export default function VenueApplyPage() {
 
   // 已绑定 venue → 入驻成功页
   if (me?.venue) {
+    const v = me.venue
+    const fullAddr = `${v.province ?? ''}${v.city ?? ''}${v.district ?? ''}${v.address}`
     return (
       <View className='venue-apply-page'>
         <PageHeader title='球房入驻' />
         <View className='va-success-card'>
           <Text className='va-success-icon'>✅</Text>
-          <Text className='va-success-title'>{me.venue.name}</Text>
+          <Text className='va-success-title'>{v.name}</Text>
           <Text className='va-success-sub'>已通过审核 · 入驻成功</Text>
           <View className='va-info'>
             <View className='va-info-row'>
               <Text className='va-info-label'>球房 ID</Text>
-              <Text className='va-info-value'>{me.venue.id}</Text>
+              <Text className='va-info-value'>{v.id}</Text>
             </View>
             <View className='va-info-row'>
               <Text className='va-info-label'>地址</Text>
-              <Text className='va-info-value'>{me.venue.address}</Text>
+              <Text className='va-info-value'>{fullAddr}</Text>
             </View>
             <View className='va-info-row'>
               <Text className='va-info-label'>台桌数</Text>
@@ -212,7 +237,9 @@ export default function VenueApplyPage() {
           </View>
           <View className='va-info-row'>
             <Text className='va-info-label'>地址</Text>
-            <Text className='va-info-value'>{p.address}</Text>
+            <Text className='va-info-value'>
+              {`${p.province ?? ''}${p.city ?? ''}${p.district ?? ''}${p.address}`}
+            </Text>
           </View>
           <View className='va-info-row'>
             <Text className='va-info-label'>台桌数</Text>
@@ -275,11 +302,65 @@ export default function VenueApplyPage() {
           onInput={upd('contactPhone')}
         />
 
+        <Text className='va-label'>所在地区 *</Text>
+        <View className='va-region-row'>
+          <Picker
+            mode='selector'
+            range={regionTree.map((p) => p.name)}
+            disabled={regionsLoading || regionTree.length === 0}
+            onChange={(e) => {
+              const i = Number(e.detail.value)
+              const p = regionTree[i]
+              if (!p) return
+              setForm((s) => ({
+                ...s,
+                province: p.name,
+                city: '',
+                district: ''
+              }))
+            }}
+          >
+            <View className='va-region-cell'>
+              {form.province || (regionsLoading ? '加载中…' : '请选择省份')}
+            </View>
+          </Picker>
+          <Picker
+            mode='selector'
+            range={cityList.map((c) => c.name)}
+            disabled={cityList.length === 0}
+            onChange={(e) => {
+              const i = Number(e.detail.value)
+              const c = cityList[i]
+              if (!c) return
+              setForm((s) => ({ ...s, city: c.name, district: '' }))
+            }}
+          >
+            <View className='va-region-cell'>
+              {form.city || (form.province ? '请选择市' : '市')}
+            </View>
+          </Picker>
+          <Picker
+            mode='selector'
+            range={districtList.map((d) => d.name)}
+            disabled={districtList.length === 0}
+            onChange={(e) => {
+              const i = Number(e.detail.value)
+              const d = districtList[i]
+              if (!d) return
+              setForm((s) => ({ ...s, district: d.name }))
+            }}
+          >
+            <View className='va-region-cell'>
+              {form.district || (form.city ? '请选择区/县' : '区/县')}
+            </View>
+          </Picker>
+        </View>
+
         <Text className='va-label'>详细地址 *</Text>
         <Textarea
           className='va-field va-textarea'
           value={form.address}
-          placeholder='北京朝阳区 xx 路 88 号 3 层'
+          placeholder='xx 路 88 号 3 层（不用重复省市区）'
           onInput={upd('address')}
         />
 

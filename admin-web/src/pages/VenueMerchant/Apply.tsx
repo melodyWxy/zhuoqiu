@@ -3,6 +3,7 @@ import {
   App,
   Button,
   Card,
+  Cascader,
   Form,
   Input,
   InputNumber,
@@ -20,7 +21,11 @@ import {
   venueApplicationApi,
   venueAuthApi
 } from '../../api/venue'
-import type { VenueApplicationPayload } from '../../api/venues'
+import { regionsApi } from '../../api/venues'
+import type {
+  VenueApplicationPayload,
+  RegionNode
+} from '../../api/venues'
 
 const { Title, Paragraph } = Typography
 
@@ -39,11 +44,31 @@ interface FormValues {
   name: string
   contactName: string
   contactPhone: string
+  /** Cascader 值：[省 name, 市 name, 区 name] */
+  region: [string, string, string]
   address: string
   tablesCount: number
   description?: string
   hoursMon: string
   applyAllDays: boolean
+}
+
+/** 把 RegionNode[] 转成 antd Cascader options（用 name 作 value，便于直接落库） */
+function toCascaderOptions(tree: RegionNode[]) {
+  return tree.map((p) => ({
+    value: p.name,
+    label: p.name,
+    children:
+      p.children?.map((c) => ({
+        value: c.name,
+        label: c.name,
+        children:
+          c.children?.map((d) => ({
+            value: d.name,
+            label: d.name
+          })) ?? []
+      })) ?? []
+  }))
 }
 
 export default function Apply() {
@@ -54,7 +79,23 @@ export default function Apply() {
   const [licenseUrl, setLicenseUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [regionTree, setRegionTree] = useState<RegionNode[]>([])
   const setAccount = useVenueAuthStore((s) => s.setAccount)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await regionsApi.list()
+        if (!cancelled) setRegionTree(r.tree)
+      } catch {
+        // 拦截器已提示，留空 cascader 让用户重试
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // 如果已登录且已经有 venue，直接跳走
   useEffect(() => {
@@ -141,10 +182,18 @@ export default function Apply() {
     }
     const hours = v.hoursMon
     const openHours = DAYS.map((d) => ({ day: d, hours }))
+    if (!v.region || v.region.length !== 3) {
+      msg.warning('请选择完整的省 / 市 / 区')
+      return
+    }
+    const [province, city, district] = v.region
     const payload: VenueApplicationPayload = {
       name: v.name,
       contactName: v.contactName,
       contactPhone: v.contactPhone,
+      province,
+      city,
+      district,
       address: v.address,
       tablesCount: v.tablesCount,
       openHours,
@@ -227,13 +276,42 @@ export default function Apply() {
               </Form.Item>
             </Space>
             <Form.Item
+              label="所在地区"
+              name="region"
+              rules={[
+                {
+                  required: true,
+                  message: '请选择省 / 市 / 区',
+                  type: 'array',
+                  len: 3
+                }
+              ]}
+            >
+              <Cascader
+                options={toCascaderOptions(regionTree)}
+                placeholder={
+                  regionTree.length === 0
+                    ? '加载行政区划中…'
+                    : '选择省 / 市 / 区'
+                }
+                showSearch={{
+                  filter: (input, path) =>
+                    path.some((opt) =>
+                      String(opt.label).toLowerCase().includes(input.toLowerCase())
+                    )
+                }}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+            <Form.Item
               label="详细地址"
               name="address"
               rules={[{ required: true, min: 2, max: 255 }]}
+              tooltip="不用重复省市区，只填街道及门牌号"
             >
               <Input.TextArea
                 rows={2}
-                placeholder="北京市朝阳区 xx 路 88 号 3 层"
+                placeholder="xx 路 88 号 3 层"
               />
             </Form.Item>
 

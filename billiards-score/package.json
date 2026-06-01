@@ -29,7 +29,6 @@
     "@tarojs/runtime": "^4.2.0",
     "@tarojs/taro": "^4.2.0",
     "@tarojs/webpack5-runner": "^4.2.0",
-    "ali-oss": "^6.23.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^4.5.0"
@@ -39,7 +38,6 @@
     "@babel/preset-react": "^7.28.5",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.2",
     "@tarojs/cli": "^4.2.0",
-    "@types/ali-oss": "^6.23.3",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

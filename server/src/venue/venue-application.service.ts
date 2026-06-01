@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
 import { genId } from '../common/utils/id'
 import { AuditService } from '../audit/audit.service'
+import { GeoService } from '../geo/geo.service'
 import {
   ApplicationPayloadDto,
   SubmitApplicationDto
@@ -18,7 +19,8 @@ import {
 export class VenueApplicationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly geo: GeoService
   ) {}
 
   /**
@@ -142,7 +144,31 @@ export class VenueApplicationService {
     adminId: string,
     ctx: { ip: string; userAgent?: string }
   ) {
+    // 先读出申请校验状态 + 调外部地理编码（不能放进事务里跑，
+    // 否则 5s 网络等待会一直占着行锁）。地理编码失败留 null，
+    // 不阻塞审核通过流程。
+    const pre = await this.prisma.venueApplication.findUnique({
+      where: { id }
+    })
+    if (!pre) {
+      throw new BusinessException(
+        ErrorCode.VENUE_APPLICATION_NOT_FOUND,
+        '申请不存在'
+      )
+    }
+    if (pre.status !== VenueApplicationStatus.pending) {
+      throw new BusinessException(
+        ErrorCode.VENUE_APPLICATION_STATE_INVALID,
+        '只有 pending 申请可以审核通过'
+      )
+    }
+    const prePayload = pre.payloadJson as unknown as ApplicationPayloadDto
+    // 拼上省/市/区前缀给腾讯，提高 lat/lng 精度（详细地址往往省了行政区前缀）
+    const fullAddress = `${prePayload.province}${prePayload.city}${prePayload.district}${prePayload.address}`
+    const geo = await this.geo.resolveAddress(fullAddress)
+
     return this.prisma.$transaction(async (tx) => {
+      // 事务内重读 + 重检一遍，防并发审核
       const app = await tx.venueApplication.findUnique({
         where: { id },
         include: { applicant: true }
@@ -170,6 +196,13 @@ export class VenueApplicationService {
           id: venueId,
           name: payload.name,
           address: payload.address,
+          // 省/市/区直接用商家入驻时三级 picker 选的值（权威）；
+          // 腾讯地图只为「同城距离排序」补 lat/lng，不再决定城市归属
+          province: payload.province,
+          city: payload.city,
+          district: payload.district,
+          lat: geo.lat,
+          lng: geo.lng,
           phone: payload.contactPhone,
           tablesCount: payload.tablesCount,
           openHoursJson: openHoursRecord as unknown as Prisma.InputJsonValue,

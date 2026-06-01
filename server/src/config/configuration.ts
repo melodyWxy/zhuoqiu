@@ -10,6 +10,7 @@ export interface AppConfig {
   }
   wechat: { appId: string; appSecret: string }
   douyin: { appId: string; appSecret: string }
+  tencentMap: { key: string; sk: string }
 }
 
 export default (): AppConfig => ({
@@ -29,5 +30,9 @@ export default (): AppConfig => ({
   douyin: {
     appId: process.env.DOUYIN_MP_APP_ID ?? '',
     appSecret: process.env.DOUYIN_MP_APP_SECRET ?? ''
+  },
+  tencentMap: {
+    key: process.env.TENCENT_MAP_KEY ?? '',
+    sk: process.env.TENCENT_MAP_SK ?? ''
   }
 })

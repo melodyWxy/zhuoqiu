@@ -333,6 +333,10 @@ model Venue {
   name            String        @db.VarChar(128)
   slug            String?       @unique @db.VarChar(64)
   address         String        @db.VarChar(255)
+  // v2.21 引入：商家入驻时三级 picker 选择，用于「附近 = 同城」筛选 + 完整地址展示
+  province        String?       @db.VarChar(32)
+  city            String?       @db.VarChar(32)
+  district        String?       @db.VarChar(32)
   lat             Float?
   lng             Float?
   phone           String        @db.VarChar(32)
@@ -353,6 +357,7 @@ model Venue {
 
   @@index([name])
   @@index([status])
+  @@index([city])
   @@map("venues")
 }
 

@@ -11,10 +11,19 @@ export interface VenueApplicationPayload {
   name: string
   contactName: string
   contactPhone: string
+  province: string
+  city: string
+  district: string
   address: string
   tablesCount: number
   openHours: Array<{ day: string; hours: string }>
   description?: string
+}
+
+export interface RegionNode {
+  code: string
+  name: string
+  children?: RegionNode[]
 }
 
 export interface VenueApplicationItem {
@@ -62,4 +71,11 @@ export const venueAdminApi = {
     http
       .post(`/admin/venue-applications/${id}/reject`, { rejectReason })
       .then((r) => r.data)
+}
+
+export const regionsApi = {
+  list: () =>
+    http
+      .get<{ tree: RegionNode[] }>('/regions')
+      .then((r) => r.data as unknown as { tree: RegionNode[] })
 }

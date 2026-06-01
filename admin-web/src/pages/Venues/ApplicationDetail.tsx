@@ -110,7 +110,13 @@ export default function VenueApplicationDetail() {
           <Descriptions.Item label="联系人">{p.contactName}</Descriptions.Item>
           <Descriptions.Item label="联系电话">{p.contactPhone}</Descriptions.Item>
           <Descriptions.Item label="台桌数">{p.tablesCount}</Descriptions.Item>
-          <Descriptions.Item label="地址" span={2}>
+          {/* 商家在 picker 里选的省/市/区，单独成行让审核员一眼看出与「详细地址」是否一致 */}
+          <Descriptions.Item label="所在地区" span={2}>
+            {p.province && p.city && p.district
+              ? `${p.province} / ${p.city} / ${p.district}`
+              : '— （历史数据，未选）'}
+          </Descriptions.Item>
+          <Descriptions.Item label="详细地址" span={2}>
             {p.address}
           </Descriptions.Item>
           <Descriptions.Item label="营业时间" span={2}>
