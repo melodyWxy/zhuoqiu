@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import {
   tournamentsPublicApi,
@@ -10,6 +10,7 @@ import {
 import PageHeader from '../../components/PageHeader'
 import EmptyState from '../../components/EmptyState'
 import LoadingState from '../../components/LoadingState'
+import { buildVenueShare, buildVenueTimelineShare } from '../../utils/share'
 import './index.scss'
 
 const DAY_LABEL: Record<string, string> = {
@@ -30,6 +31,31 @@ export default function VenueDetailPage() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  /** 分享给好友 / 朋友圈 —— venue 加载完才能给真实标题，未加载时给兜底 */
+  useShareAppMessage(() => {
+    if (venue) {
+      return buildVenueShare({
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        coverImage: venue.coverImage
+      })
+    }
+    return { title: '球房 · 击球帮', path: `/pages/venue-detail/index?id=${id}` }
+  })
+
+  useShareTimeline(() => {
+    if (venue) {
+      return buildVenueTimelineShare({
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        coverImage: venue.coverImage
+      })
+    }
+    return { title: '球房 · 击球帮' }
+  })
 
   useEffect(() => {
     if (!id) {

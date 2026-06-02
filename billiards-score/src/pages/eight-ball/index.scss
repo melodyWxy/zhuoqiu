@@ -266,16 +266,24 @@
   padding: 14px 18px;
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.06) 100%);
   border: 1.5px solid var(--accent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.rcb-main {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  width: 100%;
   cursor: pointer;
 
   &:active {
     transform: scale(0.98);
-    background: rgba(212, 175, 55, 0.25);
+    opacity: var(--opacity-active);
   }
 }
 
@@ -298,6 +306,26 @@
   font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.8;
+}
+
+.rcb-share-btn {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  line-height: 44px;
+  padding: 0;
+  background: var(--accent);
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+
+  &::after { border: none; }
+
+  &--hover {
+    opacity: var(--opacity-active);
+  }
 }
 
 /* 比赛已结束弹窗 */

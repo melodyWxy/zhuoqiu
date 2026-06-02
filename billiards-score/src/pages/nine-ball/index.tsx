@@ -1,10 +1,12 @@
 import { View, Text, Button } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useState } from 'react'
 import { useNineBallStore } from '../../core/game/store'
 import { useMatchStore } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
 import { useUserStore } from '../../core/user/store'
+import { matchApi } from '../../core/api/match'
+import { buildMatchInviteShare } from '../../utils/share'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
 import OnlineNineBall from './OnlineMode'
@@ -16,6 +18,23 @@ type WinKind = 'normal' | 'small' | 'big' | 'golden9'
 export default function NineBallPage() {
   const router = useRouter()
   const matchId = router.params.matchId as string | undefined
+
+  /**
+   * 分享：仅联机模式下有 roomCode 才有意义。
+   * 触发时同步取一次 detail 拿 code（detail 已经在 OnlineMode 里 fetch 过；
+   * 这里是分享触发时的兜底，避免 OnlineMode 还没拿到时分享出去带空 roomCode）。
+   */
+  useShareAppMessage(async () => {
+    if (!matchId) return { title: '九球记分 · 击球帮', path: '/pages/index/index' }
+    try {
+      const d = await matchApi.detail(matchId)
+      if (d.code) return buildMatchInviteShare('nine_ball', d.code)
+    } catch {
+      // 拿不到 detail 也别让分享失败
+    }
+    return { title: '九球记分 · 击球帮', path: '/pages/index/index' }
+  })
+
   if (matchId) {
     // 联机模式：完全走 cloud 数据
     return <OnlineNineBall matchId={matchId} />

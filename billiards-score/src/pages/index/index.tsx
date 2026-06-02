@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
@@ -8,6 +8,7 @@ import {
   tournamentsPublicApi,
   type TournamentItem
 } from '../../core/api/venue'
+import { buildHomeShare, buildHomeTimelineShare } from '../../utils/share'
 import './index.scss'
 
 function formatMd(iso: string): string {
@@ -21,6 +22,10 @@ export default function Index() {
   const [loginOpen, setLoginOpen] = useState(false)
   const [activeMatch, setActiveMatch] = useState<MatchDetail | null>(null)
   const [hotTournaments, setHotTournaments] = useState<TournamentItem[]>([])
+
+  /** 首页分享：good for app 推广，朋友圈也接 */
+  useShareAppMessage(() => buildHomeShare())
+  useShareTimeline(() => buildHomeTimelineShare())
 
   const refreshActive = async () => {
     if (!cloudUser) {

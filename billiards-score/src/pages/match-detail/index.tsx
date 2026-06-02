@@ -1,10 +1,11 @@
 import { View, Text } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import LoadingState from '../../components/LoadingState'
 import EmptyState from '../../components/EmptyState'
+import { buildMatchReplayShare } from '../../utils/share'
 import './index.scss'
 
 const EVENT_LABEL: Record<string, string> = {
@@ -45,6 +46,15 @@ export default function MatchDetailPage() {
     actorUserId: string | null
   }>>([])
   const [loading, setLoading] = useState(true)
+
+  /** 分享战报 —— 不接朋友圈（朋友圈 query 透传后落地路径不可控） */
+  useShareAppMessage(() => {
+    if (detail) return buildMatchReplayShare(detail)
+    return {
+      title: '击球帮战报',
+      path: matchId ? `/pages/match-detail/index?id=${matchId}` : '/pages/index/index'
+    }
+  })
 
   useEffect(() => {
     if (!matchId) return

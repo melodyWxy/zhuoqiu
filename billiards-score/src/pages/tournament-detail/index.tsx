@@ -1,5 +1,5 @@
 import { View, Text, Button } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import {
   tournamentsPublicApi,
@@ -13,6 +13,7 @@ import { useAuthStore } from '../../core/auth/store'
 import LoginSheet from '../../components/LoginSheet'
 import PageHeader from '../../components/PageHeader'
 import LoadingState from '../../components/LoadingState'
+import { buildTournamentShare, buildTournamentTimelineShare } from '../../utils/share'
 import './index.scss'
 
 const STATUS_LABEL: Record<string, { text: string; color: string }> = {
@@ -44,6 +45,17 @@ export default function TournamentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+
+  /** 分享给好友 / 朋友圈 —— t 加载完才能给真实标题 */
+  useShareAppMessage(() => {
+    if (t) return buildTournamentShare({ id: t.id, name: t.name, status: t.status })
+    return { title: '赛事 · 击球帮', path: `/pages/tournament-detail/index?id=${id}` }
+  })
+
+  useShareTimeline(() => {
+    if (t) return buildTournamentTimelineShare({ id: t.id, name: t.name, status: t.status })
+    return { title: '赛事 · 击球帮' }
+  })
 
   const fetchAll = async () => {
     if (!id) return

@@ -1,4 +1,4 @@
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
@@ -307,15 +307,21 @@ export default function OnlineNineBall({ matchId }: Props) {
       <ConnectionBanner />
 
       {detail.code && detail.state !== 'ended' && (
-        <View
-          className='room-code-banner'
-          onClick={handleShare}
-        >
-          <Text className='rcb-label'>🔗 房间码</Text>
-          <Text className='rcb-code'>{detail.code}</Text>
-          <Text className='rcb-hint'>
-            {players.filter((p) => p.userId).length}/{players.length} 人在位 · 点击复制
-          </Text>
+        <View className='room-code-banner'>
+          <View className='rcb-main' onClick={handleShare}>
+            <Text className='rcb-label'>🔗 房间码</Text>
+            <Text className='rcb-code'>{detail.code}</Text>
+            <Text className='rcb-hint'>
+              {players.filter((p) => p.userId).length}/{players.length} 人在位 · 点击复制
+            </Text>
+          </View>
+          <Button
+            className='rcb-share-btn'
+            openType='share'
+            hoverClass='rcb-share-btn--hover'
+          >
+            分享给朋友
+          </Button>
         </View>
       )}
 
