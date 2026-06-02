@@ -10,6 +10,7 @@ import { ReplayStatus } from '@prisma/client'
 import { ReplayRendererService } from './replay-renderer.service'
 import { OssDirectService } from '../upload/oss-direct.service'
 import { MatchService } from './match.service'
+import { WxacodeService } from './wxacode.service'
 
 /**
  * 战报海报生成 job：异步触发 → render → OSS 上传 → 写回 Match 表
@@ -31,6 +32,7 @@ export class ReplayJobService implements OnApplicationBootstrap {
     private readonly prisma: PrismaService,
     private readonly renderer: ReplayRendererService,
     private readonly oss: OssDirectService,
+    private readonly wxacode: WxacodeService,
     @Inject(forwardRef(() => MatchService))
     private readonly matchService: MatchService
   ) {}
@@ -125,6 +127,22 @@ export class ReplayJobService implements OnApplicationBootstrap {
           ? (computed.scores ?? {})
           : (computed.wins ?? {})
 
+        // C-2：拉小程序码 PNG（失败不阻塞海报，海报会用占位）
+        const qrPng = await this.fetchWxacode(matchId)
+        // 小程序码独立上传一份（admin / 调试用）
+        let qrUrl: string | null = null
+        if (qrPng) {
+          try {
+            qrUrl = await this.oss.putBuffer(
+              `replay/${matchId}/qr.png`,
+              qrPng,
+              'image/png'
+            )
+          } catch (e) {
+            this.logger.warn(`qr OSS upload failed: ${(e as Error).message}`)
+          }
+        }
+
         const buf = await this.renderer.render({
           matchType: replay.detail.type,
           matchCode: replay.detail.code,
@@ -137,7 +155,7 @@ export class ReplayJobService implements OnApplicationBootstrap {
             })),
           scores,
           narrative: replay.narrative,
-          qrPng: null // C-2 接入小程序码
+          qrPng
         })
 
         const url = await this.oss.putBuffer(
@@ -151,6 +169,7 @@ export class ReplayJobService implements OnApplicationBootstrap {
           data: {
             replayStatus: ReplayStatus.ready,
             replayPosterUrl: url,
+            replayQrUrl: qrUrl,
             replayGeneratedAt: new Date(),
             replayFailedReason: null
           }
@@ -178,5 +197,31 @@ export class ReplayJobService implements OnApplicationBootstrap {
     })
     this.logger.error(`poster failed ${matchId}: ${lastErr?.message}`)
     return { posterUrl: null, status: ReplayStatus.failed }
+  }
+
+  /**
+   * 拉小程序码 PNG。
+   * - matchId 是 32+ 字符长哈希；scene 限 32 字符 → 取尾 12 字符（碰撞概率
+   *   极低）+ `m=` 前缀
+   * - 没发版的小程序（开发版纯本地）拉 wxacode 会报 41030；本期容忍这种
+   *   失败（返回 null，海报会用占位）
+   * - WX_REPLAY_ENV_VERSION 环境变量控制版本：默认 release；体验阶段可传
+   *   trial
+   */
+  private async fetchWxacode(matchId: string): Promise<Buffer | null> {
+    try {
+      const suffix = matchId.slice(-12)
+      const scene = `m=${suffix}`
+      const envVersion = (process.env.WX_REPLAY_ENV_VERSION ?? 'release') as
+        | 'release'
+        | 'trial'
+        | 'develop'
+      return await this.wxacode.getUnlimited(scene, 'pages/match-detail/index', envVersion)
+    } catch (e) {
+      this.logger.warn(
+        `wxacode failed for ${matchId}, fallback to placeholder: ${(e as Error).message}`
+      )
+      return null
+    }
   }
 }

@@ -160,6 +160,29 @@ export class MatchService {
     return match
   }
 
+  /**
+   * v2.22 战报小程序码 scene 反查：matchId 后 12 字符 → 完整 matchId
+   *
+   * 海报上的小程序码 scene 是 `m=xxxxx`（matchId 后 12 字符），扫码进
+   * weapp 后 app.tsx onLaunch 解析 → 拿后缀去 server 反查完整 matchId →
+   * navigateTo 到战报页。
+   *
+   * 碰撞概率：matchId 用 nanoid 32 字符 base62，后 12 字符约 62^12 ≈ 3×10^21
+   * 空间，与全表行数比远低于碰撞阈值。多于 1 条命中返回 null（让前端兜底
+   * 到首页）。
+   */
+  async findByIdSuffix(suffix: string): Promise<{ id: string } | null> {
+    if (!suffix || suffix.length < 6 || suffix.length > 16) return null
+    // 用 endsWith 通过 ILIKE 实现（PG 字段无索引会全表扫；matchId 表通常
+    // 不会超过百万级，全表扫可接受。如果将来量大，给 matches.id 加 reverse
+    // index 或拆字段即可）
+    const matches = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM matches WHERE id LIKE ${'%' + suffix} LIMIT 2
+    `
+    if (matches.length !== 1) return null
+    return matches[0] ?? null
+  }
+
   private async detailFromTx(tx: Prisma.TransactionClient | PrismaService, matchId: string) {
     const match = await tx.match.findUnique({
       where: { id: matchId },

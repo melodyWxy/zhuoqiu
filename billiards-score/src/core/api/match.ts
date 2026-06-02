@@ -85,6 +85,12 @@ export const matchApi = {
   replay: (idOrCode: string) =>
     callApi<ReplayResponse>(`/matches/${idOrCode}/replay`, { toast: false }),
 
+  /** v2.22 战报小程序码 scene 反查：matchId 后 12 字符 → 完整 id；找不到返回 null */
+  byIdSuffix: (suffix: string) =>
+    callApi<{ id: string } | null>(`/matches/by-suffix/${encodeURIComponent(suffix)}`, {
+      toast: false
+    }),
+
   seat: (id: string, action: 'occupy' | 'leave', slot?: number, displayName?: string) =>
     callApi<MatchDetail>(`/matches/${id}/seat`, {
       method: 'POST',

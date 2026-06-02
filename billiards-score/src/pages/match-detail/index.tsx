@@ -50,7 +50,10 @@ function PlayerAvatar({ avatar, fallback }: { avatar: string | null; fallback: s
 
 export default function MatchDetailPage() {
   const router = useRouter()
-  const matchId = router.params.id as string | undefined
+  // 同时支持 ?id=（直链）和 ?ms=（小程序码 scene 后缀反查）
+  const directId = router.params.id as string | undefined
+  const ms = router.params.ms as string | undefined
+  const [matchId, setMatchId] = useState<string | undefined>(directId)
   const [replay, setReplay] = useState<ReplayResponse | null>(null)
   const [events, setEvents] = useState<Array<{
     id: number
@@ -63,6 +66,22 @@ export default function MatchDetailPage() {
   }>>([])
   const [loading, setLoading] = useState(true)
   const [eventsOpen, setEventsOpen] = useState(false)
+
+  // ms 反查：扫小程序码进入时，先拿 12 字符后缀换完整 matchId
+  useEffect(() => {
+    if (matchId || !ms) return
+    matchApi
+      .byIdSuffix(ms)
+      .then((r) => {
+        if (r?.id) {
+          setMatchId(r.id)
+        } else {
+          // 反查不到 → 兜底回首页（Loading 会停在那；用户可手动返回）
+          setLoading(false)
+        }
+      })
+      .catch(() => setLoading(false))
+  }, [matchId, ms])
 
   /** 分享战报 —— imageUrl 用海报 url（Phase C-3 接通），先走 buildMatchReplayShare 兜底 */
   useShareAppMessage(() => {
@@ -87,12 +106,25 @@ export default function MatchDetailPage() {
       .finally(() => setLoading(false))
   }, [matchId])
 
-  if (!matchId) {
+  // 真正缺参（既没 id 也没 ms）
+  if (!matchId && !ms) {
     return (
       <EmptyState
         icon='⚠️'
         title='参数错误'
         description='缺少 match id，请从历史记录里重新进入'
+      />
+    )
+  }
+  // ms 反查中或反查失败
+  if (!matchId && ms) {
+    return loading ? (
+      <LoadingState text='正在打开战报' />
+    ) : (
+      <EmptyState
+        icon='⚠️'
+        title='战报不存在'
+        description='可能这场比赛已经被清理；回首页看看其他比赛'
       />
     )
   }
