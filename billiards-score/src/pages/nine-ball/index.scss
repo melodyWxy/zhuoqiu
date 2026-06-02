@@ -366,38 +366,59 @@
 
 .ended-box {
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   background: var(--bg-card);
   border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .ended-title {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.ended-sub {
-  font-size: 14px;
-  color: var(--text-secondary);
   text-align: center;
 }
 
+.ended-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* Phase B：三按钮 —— primary 金色实色 / secondary 描边 / tertiary 文本 */
 .ended-btn {
-  margin-top: 8px;
-  padding: 10px 24px;
-  background: var(--accent);
-  color: var(--primary-dark);
-  border-radius: 8px;
-  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
+  line-height: 46px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+}
 
-  &:active { opacity: 0.85; }
+.ended-btn-primary {
+  background: var(--accent);
+  color: var(--primary-dark);
+  &:active { opacity: var(--opacity-active); }
+}
+
+.ended-btn-secondary {
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  &:active { opacity: var(--opacity-active); }
+}
+
+.ended-btn-tertiary {
+  background: transparent;
+  color: var(--text-secondary);
+  &:active { opacity: 0.6; }
 }

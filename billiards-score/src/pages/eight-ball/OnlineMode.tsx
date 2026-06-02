@@ -25,7 +25,8 @@ export default function OnlineEightBall({ matchId }: Props) {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [busy, setBusy] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
-  const [endedOverlay, setEndedOverlay] = useState<null | { countdown: number }>(null)
+  // 比赛结束弹窗：不再倒计时强跳，由用户选择「查看战报 / 再来一场 / 歇会」
+  const [endedOverlay, setEndedOverlay] = useState<null | { done: true }>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
@@ -59,7 +60,7 @@ export default function OnlineEightBall({ matchId }: Props) {
           (ev?.type === 'end' || ev?.type === 'force_end') &&
           !selfInitiatedEnd.current
         ) {
-          setEndedOverlay({ countdown: 3 })
+          setEndedOverlay({ done: true })
         }
       }
     })
@@ -72,17 +73,7 @@ export default function OnlineEightBall({ matchId }: Props) {
   }, [matchId, refresh])
 
   // 倒计时跳转
-  useEffect(() => {
-    if (!endedOverlay) return
-    if (endedOverlay.countdown <= 0) {
-      Taro.switchTab({ url: '/pages/me/index' })
-      return
-    }
-    const t = setTimeout(() => {
-      setEndedOverlay((s) => (s ? { countdown: s.countdown - 1 } : s))
-    }, 1000)
-    return () => clearTimeout(t)
-  }, [endedOverlay])
+  // Phase B：去掉强制倒计时；用户从弹窗手动选下一步
 
   if (!detail) return <View style={{ padding: 40, textAlign: 'center' }}>加载中…</View>
 
@@ -321,15 +312,29 @@ export default function OnlineEightBall({ matchId }: Props) {
       {endedOverlay && (
         <View className='ended-overlay'>
           <View className='ended-box'>
-            <Text className='ended-title'>比赛已结束</Text>
-            <Text className='ended-sub'>
-              {endedOverlay.countdown} 秒后自动退出到"我的"
-            </Text>
+            <Text className='ended-title'>比赛已结束 🏁</Text>
+            <Text className='ended-sub'>记得分享战报给朋友看看</Text>
             <View
-              className='ended-btn'
+              className='ended-btn ended-btn-primary'
+              onClick={() =>
+                Taro.navigateTo({ url: `/pages/match-detail/index?id=${matchId}` })
+              }
+            >
+              🏆 查看战报
+            </View>
+            <View
+              className='ended-btn ended-btn-secondary'
+              onClick={() =>
+                Taro.showToast({ title: '敬请期待', icon: 'none' })
+              }
+            >
+              🔁 再来一场
+            </View>
+            <View
+              className='ended-btn ended-btn-tertiary'
               onClick={() => Taro.switchTab({ url: '/pages/me/index' })}
             >
-              立即退出
+              💤 先去歇会
             </View>
           </View>
         </View>
