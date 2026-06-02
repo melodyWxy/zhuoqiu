@@ -167,6 +167,13 @@ enum MatchState {
   dissolved
 }
 
+// v2.22 战报海报状态机
+enum ReplayStatus {
+  pending  // 入队 / 进行中
+  ready    // 海报 + 小程序码 OSS URL 已就绪
+  failed   // 重试 N 次仍失败，前端兜底用 logo
+}
+
 model Match {
   id                  String      @id // m_xxxxxxxx
   code                String?     @unique @db.VarChar(6) // 6 位房间码，已结束 24h 后置空
@@ -186,6 +193,13 @@ model Match {
 
   // v2.10 P5：与球房关联（bracket 的反向关系声明在 TournamentBracketMatch.matchId 侧）
   venueId             String?     @map("venue_id")
+
+  // v2.22 战报海报（prd/match-replay.md C-1）
+  replayStatus        ReplayStatus? @map("replay_status")
+  replayPosterUrl     String?       @map("replay_poster_url")
+  replayQrUrl         String?       @map("replay_qr_url")
+  replayGeneratedAt   DateTime?     @map("replay_generated_at")
+  replayFailedReason  String?       @map("replay_failed_reason") @db.VarChar(500)
 
   createdAt           DateTime    @default(now()) @map("created_at")
   updatedAt           DateTime    @updatedAt @map("updated_at")

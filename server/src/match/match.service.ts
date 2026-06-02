@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
+import { ReplayJobService } from './replay-job.service'
 import {
   MatchState,
   MatchType,
   Prisma,
+  ReplayStatus,
   User
 } from '@prisma/client'
+import { computeNarrative } from './replay-narrative'
 import { PrismaService } from '../prisma/prisma.service'
 import { RealtimeService } from '../realtime/realtime.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
@@ -52,7 +55,9 @@ export class MatchService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly realtime: RealtimeService
+    private readonly realtime: RealtimeService,
+    @Inject(forwardRef(() => ReplayJobService))
+    private readonly replayJob: ReplayJobService
   ) {}
 
   // ============ 创建 ============
@@ -233,69 +238,44 @@ export class MatchService {
   }
 
   /**
-   * 战报：在 detail 基础上加叙事文案 + 海报状态
+   * 战报：detail + 叙事文案 + 海报状态
    *
-   * Phase A：海报字段先返回 pending（schema 未加 replayPosterUrl 列），等
-   * Phase C-1 接入 canvas 后端再 wire 真实状态。
+   * 海报字段从 Match 表的 replayStatus / replayPosterUrl / replayQrUrl 读，
+   * generate job (ReplayJobService) 负责异步 fill。
    */
   async replay(matchIdOrCode: string) {
     const detail = await this.detail(matchIdOrCode)
-
-    const players = detail.players.filter((p) => p.isCurrent)
-    const isNineBall = detail.type === MatchType.nine_ball
-    const ranked = [...players].sort((a, b) => {
-      const sa = isNineBall
-        ? (detail.computed as NineBallComputedState).scores?.[a.slot] ?? 0
-        : (detail.computed as EightBallComputedState).wins?.[a.slot] ?? 0
-      const sb = isNineBall
-        ? (detail.computed as NineBallComputedState).scores?.[b.slot] ?? 0
-        : (detail.computed as EightBallComputedState).wins?.[b.slot] ?? 0
-      return sb - sa
+    const narrative = computeNarrative({
+      type: detail.type,
+      players: detail.players,
+      computed: detail.computed,
+      timer: detail.timer
     })
 
-    const champion = ranked[0] ?? null
-    const runnerUp = ranked[1] ?? null
-
-    let headline = '一场精彩对决'
-    if (champion && runnerUp && ranked.length === 2) {
-      const cs = isNineBall
-        ? (detail.computed as NineBallComputedState).scores?.[champion.slot] ?? 0
-        : (detail.computed as EightBallComputedState).wins?.[champion.slot] ?? 0
-      const rs = isNineBall
-        ? (detail.computed as NineBallComputedState).scores?.[runnerUp.slot] ?? 0
-        : (detail.computed as EightBallComputedState).wins?.[runnerUp.slot] ?? 0
-      headline = `${champion.displayName} ${cs}:${rs} 击败 ${runnerUp.displayName}`
-    } else if (champion && ranked.length > 2) {
-      headline = `${champion.displayName} 拿下第一`
-    }
-
-    // sub line：时长 + (九球) 黄金 9 / 大金统计
-    const minutes = Math.round(detail.timer.accumulatedMs / 60000)
-    const subParts: string[] = []
-    if (minutes > 0) subParts.push(`时长 ${minutes} 分钟`)
-    if (isNineBall && champion) {
-      const stats = (detail.computed as NineBallComputedState).stats?.[champion.slot]
-      if (stats) {
-        if (stats.golden9) subParts.push(`黄金9 ×${stats.golden9}`)
-        else if (stats.bigJack) subParts.push(`大金 ×${stats.bigJack}`)
-        else if (stats.smallJack) subParts.push(`小金 ×${stats.smallJack}`)
+    // 读海报状态
+    const posterRow = await this.prisma.match.findUnique({
+      where: { id: detail.id },
+      select: {
+        replayStatus: true,
+        replayPosterUrl: true,
+        replayQrUrl: true,
+        replayFailedReason: true
       }
-    }
-    const subline = subParts.join(' · ') || '快速对局'
+    })
 
     return {
       detail,
-      narrative: {
-        headline,
-        subline,
-        championSlot: champion?.slot ?? null,
-        type: detail.type
-      },
+      narrative,
       poster: {
-        // Phase C-1 之后会从 Match.replayPosterUrl 读
-        status: 'pending' as const,
-        url: null,
-        qrUrl: null
+        status: (posterRow?.replayStatus ?? ReplayStatus.pending) as
+          | 'pending'
+          | 'ready'
+          | 'failed',
+        url: posterRow?.replayPosterUrl ?? null,
+        qrUrl: posterRow?.replayQrUrl ?? null,
+        ...(posterRow?.replayFailedReason
+          ? { failedReason: posterRow.replayFailedReason }
+          : {})
       }
     }
   }
@@ -480,25 +460,30 @@ export class MatchService {
   // ============ 结束 ============
 
   async endByOwner(matchId: string, ownerUserId: string, reason?: string) {
-    return this.withMatchLock(matchId, async (tx) => {
+    const result = await this.withMatchLock(matchId, async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId } })
       if (!match) throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
       if (match.ownerUserId !== ownerUserId) {
         throw new BusinessException(ErrorCode.FORBIDDEN, '只有房主能结束比赛')
       }
       if (match.state === MatchState.ended || match.state === MatchState.dissolved) {
-        return
+        return { ended: false }
       }
       await this.doEnd(tx, matchId, { userId: ownerUserId }, reason ?? 'owner')
+      return { ended: true }
     })
+    // 事务提交后异步生成战报海报（v2.22 C-1）
+    if (result?.ended) {
+      setImmediate(() => this.replayJob.generateSafe(matchId))
+    }
   }
 
   async forceEndByAdmin(matchId: string, adminId: string, reason: string) {
-    return this.withMatchLock(matchId, async (tx) => {
+    const result = await this.withMatchLock(matchId, async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId } })
       if (!match) throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
       if (match.state === MatchState.ended || match.state === MatchState.dissolved) {
-        return
+        return { ended: false }
       }
       await this.insertEvent(
         tx,
@@ -507,7 +492,11 @@ export class MatchService {
         { adminId }
       )
       await this.doEnd(tx, matchId, { adminId }, reason)
+      return { ended: true }
     })
+    if (result?.ended) {
+      setImmediate(() => this.replayJob.generateSafe(matchId))
+    }
   }
 
   async forcePauseByAdmin(matchId: string, adminId: string, reason: string) {
