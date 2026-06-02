@@ -168,4 +168,14 @@ export class MatchController {
     const match = await this.matchService.findMyActiveMatch(user.sub)
     return { match }
   }
+
+  /**
+   * v2.22 战绩聚合：登录用户自己的累计战绩
+   * （admin 反查其他用户战绩留 TODO，本期不做）
+   */
+  @Get('me/stats')
+  @UseGuards(UserAuthGuard)
+  async myStats(@CurrentUser() user: UserJwtPayload) {
+    return this.matchService.myStats(user.sub)
+  }
 }

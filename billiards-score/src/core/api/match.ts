@@ -48,6 +48,37 @@ export interface EventResult {
   matchState: MatchDetail
 }
 
+/** v2.22 我页累计战绩 */
+export interface MyStats {
+  totalMatches: number
+  wins: number
+  winRate: number
+  nineBall: {
+    matches: number
+    wins: number
+    bigJack: number
+    smallJack: number
+    golden9: number
+    normalWin: number
+    highScore: number
+    highScoreVs: string
+  }
+  eightBall: {
+    matches: number
+    wins: number
+    totalWinRounds: number
+  }
+  recent: Array<{
+    matchId: string
+    type: 'nine_ball' | 'eight_ball'
+    opponent: string
+    myScore: number
+    oppScore: number
+    endedAt: string | null
+    isWin: boolean
+  }>
+}
+
 /** 战报响应：detail + 叙事文案 + 海报状态 */
 export interface ReplayResponse {
   detail: MatchDetail
@@ -90,6 +121,10 @@ export const matchApi = {
     callApi<{ id: string } | null>(`/matches/by-suffix/${encodeURIComponent(suffix)}`, {
       toast: false
     }),
+
+  /** v2.22 战绩聚合：当前用户累计战绩 */
+  myStats: () =>
+    callApi<MyStats>('/me/stats', { toast: false }),
 
   seat: (id: string, action: 'occupy' | 'leave', slot?: number, displayName?: string) =>
     callApi<MatchDetail>(`/matches/${id}/seat`, {

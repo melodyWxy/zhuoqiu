@@ -412,3 +412,89 @@
 
   &:active { opacity: 0.85; }
 }
+
+/* v2.22 累计战绩卡 */
+.stats-card {
+  margin: 12px 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.stats-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stats-rate {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.stats-summary-row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-around;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.stats-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: 'SF Mono', Menlo, monospace;
+  line-height: 1;
+}
+
+.stats-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.stats-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-detail-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stats-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stats-chip {
+  font-size: 12px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 10px;
+  border-radius: 10px;
+}

@@ -747,6 +747,126 @@ export class MatchService {
     return this.detailFromTx(this.prisma, match.id)
   }
 
+  /**
+   * v2.22 战绩聚合 (`GET /v1/me/stats`)
+   *
+   * 实现：拉所有 ended 比赛 → 走 detailFromTx 拿 computed → 遍历聚合。
+   * 性能：单用户 < 1000 场前 < 100ms 内出结果；超过再考虑预聚合表。
+   */
+  async myStats(userId: string) {
+    const matches = await this.prisma.match.findMany({
+      where: {
+        OR: [{ ownerUserId: userId }, { players: { some: { userId } } }],
+        state: MatchState.ended
+      },
+      orderBy: { endedAt: 'desc' },
+      select: { id: true }
+    })
+
+    let totalMatches = 0
+    let wins = 0
+    const nineBall = {
+      matches: 0,
+      wins: 0,
+      bigJack: 0,
+      smallJack: 0,
+      golden9: 0,
+      normalWin: 0,
+      highScore: 0,
+      highScoreVs: ''
+    }
+    const eightBall = {
+      matches: 0,
+      wins: 0,
+      totalWinRounds: 0
+    }
+    const recent: Array<{
+      matchId: string
+      type: 'nine_ball' | 'eight_ball'
+      opponent: string
+      myScore: number
+      oppScore: number
+      endedAt: Date | null
+      isWin: boolean
+    }> = []
+
+    for (const m of matches) {
+      const detail = await this.detailFromTx(this.prisma, m.id)
+      const myPlayer = detail.players.find((p) => p.userId === userId && p.isCurrent)
+      if (!myPlayer) continue
+      const mySlot = myPlayer.slot
+      const isNineBall = detail.type === MatchType.nine_ball
+      const players = detail.players.filter((p) => p.isCurrent)
+
+      const myScore = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[mySlot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[mySlot] ?? 0
+
+      // 冠军：分数 / 胜局最高
+      const champion = players.reduce((a, b) => {
+        const sa = isNineBall
+          ? (detail.computed as NineBallComputedState).scores?.[a.slot] ?? 0
+          : (detail.computed as EightBallComputedState).wins?.[a.slot] ?? 0
+        const sb = isNineBall
+          ? (detail.computed as NineBallComputedState).scores?.[b.slot] ?? 0
+          : (detail.computed as EightBallComputedState).wins?.[b.slot] ?? 0
+        return sa >= sb ? a : b
+      }, players[0])
+      const isWin = champion?.slot === mySlot
+
+      totalMatches++
+      if (isWin) wins++
+
+      if (isNineBall) {
+        nineBall.matches++
+        if (isWin) nineBall.wins++
+        const myStatsRow = (detail.computed as NineBallComputedState).stats?.[mySlot]
+        if (myStatsRow) {
+          nineBall.bigJack += myStatsRow.bigJack || 0
+          nineBall.smallJack += myStatsRow.smallJack || 0
+          nineBall.golden9 += myStatsRow.golden9 || 0
+          nineBall.normalWin += myStatsRow.normalWin || 0
+        }
+        if (myScore > nineBall.highScore) {
+          nineBall.highScore = myScore
+          const opp = players.find((p) => p.slot !== mySlot)
+          nineBall.highScoreVs = opp?.displayName ?? ''
+        }
+      } else {
+        eightBall.matches++
+        if (isWin) eightBall.wins++
+        eightBall.totalWinRounds += myScore
+      }
+
+      if (recent.length < 5) {
+        const opp = players.find((p) => p.slot !== mySlot)
+        const oppScore = opp
+          ? isNineBall
+            ? (detail.computed as NineBallComputedState).scores?.[opp.slot] ?? 0
+            : (detail.computed as EightBallComputedState).wins?.[opp.slot] ?? 0
+          : 0
+        recent.push({
+          matchId: detail.id,
+          type: detail.type,
+          opponent: opp?.displayName ?? '',
+          myScore,
+          oppScore,
+          endedAt: detail.endedAt,
+          isWin
+        })
+      }
+    }
+
+    return {
+      totalMatches,
+      wins,
+      winRate: totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0,
+      nineBall,
+      eightBall,
+      recent
+    }
+  }
+
   async listMyMatches(userId: string, page: number, pageSize: number) {
     const where: Prisma.MatchWhereInput = {
       OR: [
