@@ -256,7 +256,14 @@ export class MatchService {
       owner: match.owner,
       endedAt: match.endedAt,
       endedBy: match.endedBy,
-      endedReason: match.endedReason
+      endedReason: match.endedReason,
+      // v2.22 战报海报字段（admin / weapp 都可以读这些；weapp 主要走
+      // replay() 接口，admin 用 /admin/matches/:id 读 detail 即可看到）
+      replayStatus: match.replayStatus,
+      replayPosterUrl: match.replayPosterUrl,
+      replayQrUrl: match.replayQrUrl,
+      replayGeneratedAt: match.replayGeneratedAt,
+      replayFailedReason: match.replayFailedReason
     }
   }
 
