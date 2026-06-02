@@ -48,12 +48,12 @@ export default function TournamentDetailPage() {
 
   /** 分享给好友 / 朋友圈 —— t 加载完才能给真实标题 */
   useShareAppMessage(() => {
-    if (t) return buildTournamentShare({ id: t.id, name: t.name, status: t.status })
+    if (t) return buildTournamentShare({ id: t.id, title: t.title, status: t.status })
     return { title: '赛事 · 击球帮', path: `/pages/tournament-detail/index?id=${id}` }
   })
 
   useShareTimeline(() => {
-    if (t) return buildTournamentTimelineShare({ id: t.id, name: t.name, status: t.status })
+    if (t) return buildTournamentTimelineShare({ id: t.id, title: t.title, status: t.status })
     return { title: '赛事 · 击球帮' }
   })
 

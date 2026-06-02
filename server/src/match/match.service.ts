@@ -232,6 +232,74 @@ export class MatchService {
     }
   }
 
+  /**
+   * 战报：在 detail 基础上加叙事文案 + 海报状态
+   *
+   * Phase A：海报字段先返回 pending（schema 未加 replayPosterUrl 列），等
+   * Phase C-1 接入 canvas 后端再 wire 真实状态。
+   */
+  async replay(matchIdOrCode: string) {
+    const detail = await this.detail(matchIdOrCode)
+
+    const players = detail.players.filter((p) => p.isCurrent)
+    const isNineBall = detail.type === MatchType.nine_ball
+    const ranked = [...players].sort((a, b) => {
+      const sa = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[a.slot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[a.slot] ?? 0
+      const sb = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[b.slot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[b.slot] ?? 0
+      return sb - sa
+    })
+
+    const champion = ranked[0] ?? null
+    const runnerUp = ranked[1] ?? null
+
+    let headline = '一场精彩对决'
+    if (champion && runnerUp && ranked.length === 2) {
+      const cs = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[champion.slot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[champion.slot] ?? 0
+      const rs = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[runnerUp.slot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[runnerUp.slot] ?? 0
+      headline = `${champion.displayName} ${cs}:${rs} 击败 ${runnerUp.displayName}`
+    } else if (champion && ranked.length > 2) {
+      headline = `${champion.displayName} 拿下第一`
+    }
+
+    // sub line：时长 + (九球) 黄金 9 / 大金统计
+    const minutes = Math.round(detail.timer.accumulatedMs / 60000)
+    const subParts: string[] = []
+    if (minutes > 0) subParts.push(`时长 ${minutes} 分钟`)
+    if (isNineBall && champion) {
+      const stats = (detail.computed as NineBallComputedState).stats?.[champion.slot]
+      if (stats) {
+        if (stats.golden9) subParts.push(`黄金9 ×${stats.golden9}`)
+        else if (stats.bigJack) subParts.push(`大金 ×${stats.bigJack}`)
+        else if (stats.smallJack) subParts.push(`小金 ×${stats.smallJack}`)
+      }
+    }
+    const subline = subParts.join(' · ') || '快速对局'
+
+    return {
+      detail,
+      narrative: {
+        headline,
+        subline,
+        championSlot: champion?.slot ?? null,
+        type: detail.type
+      },
+      poster: {
+        // Phase C-1 之后会从 Match.replayPosterUrl 读
+        status: 'pending' as const,
+        url: null,
+        qrUrl: null
+      }
+    }
+  }
+
   // ============ 加入 / 占位 ============
 
   async joinByCode(code: string, userId: string, slot?: number, displayName?: string) {

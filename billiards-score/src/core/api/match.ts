@@ -48,6 +48,23 @@ export interface EventResult {
   matchState: MatchDetail
 }
 
+/** 战报响应：detail + 叙事文案 + 海报状态 */
+export interface ReplayResponse {
+  detail: MatchDetail
+  narrative: {
+    headline: string
+    subline: string
+    championSlot: number | null
+    type: 'nine_ball' | 'eight_ball'
+  }
+  poster: {
+    status: 'pending' | 'ready' | 'failed'
+    url: string | null
+    qrUrl: string | null
+    failedReason?: string
+  }
+}
+
 export const matchApi = {
   create: (input: {
     type: 'nine_ball' | 'eight_ball'
@@ -63,6 +80,10 @@ export const matchApi = {
 
   detail: (idOrCode: string, opts?: { toast?: boolean }) =>
     callApi<MatchDetail>(`/matches/${idOrCode}`, { toast: opts?.toast ?? true }),
+
+  /** 战报：detail + 叙事 + 海报。Phase A 海报字段为 pending。 */
+  replay: (idOrCode: string) =>
+    callApi<ReplayResponse>(`/matches/${idOrCode}/replay`, { toast: false }),
 
   seat: (id: string, action: 'occupy' | 'leave', slot?: number, displayName?: string) =>
     callApi<MatchDetail>(`/matches/${id}/seat`, {

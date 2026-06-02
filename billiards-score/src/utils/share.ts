@@ -76,7 +76,8 @@ export function buildVenueTimelineShare(v: VenueLite): TimelineShareData {
 
 interface TournamentLite {
   id: string
-  name: string
+  /** 赛事标题，对应 server 端 TournamentItem.title 字段 */
+  title: string
   status?: string
 }
 
@@ -93,7 +94,7 @@ export function buildTournamentShare(t: TournamentLite): ShareData {
   const status = STATUS_TEXT[t.status ?? ''] ?? ''
   const suffix = status ? ` · ${status}` : ''
   return {
-    title: `${t.name}${suffix}`,
+    title: `${t.title}${suffix}`,
     path: `/pages/tournament-detail/index?id=${t.id}`,
     imageUrl: FALLBACK_COVER
   }
@@ -103,7 +104,7 @@ export function buildTournamentTimelineShare(t: TournamentLite): TimelineShareDa
   const status = STATUS_TEXT[t.status ?? ''] ?? ''
   const suffix = status ? ` · ${status}` : ''
   return {
-    title: `${t.name}${suffix}`,
+    title: `${t.title}${suffix}`,
     query: `id=${t.id}`,
     imageUrl: FALLBACK_COVER
   }

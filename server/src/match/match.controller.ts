@@ -64,6 +64,15 @@ export class MatchController {
     return this.matchService.detail(idOrCode)
   }
 
+  /**
+   * 战报数据：detail + 叙事文案 + 海报状态。
+   * 公开接口（matchId 是长哈希不易猜，分享给陌生人能打开是基本诉求）
+   */
+  @Get('matches/:idOrCode/replay')
+  async replay(@Param('idOrCode') idOrCode: string) {
+    return this.matchService.replay(idOrCode)
+  }
+
   @Get('matches/:id/events')
   async events(@Param('id') id: string) {
     return this.matchService.listEvents(id)
