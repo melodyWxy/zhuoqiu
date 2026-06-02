@@ -66,6 +66,8 @@ export default function MatchDetailPage() {
   }>>([])
   const [loading, setLoading] = useState(true)
   const [eventsOpen, setEventsOpen] = useState(false)
+  /** 海报轮询：海报 status=pending 时定时拉 replay，最多 20 次（≈ 30s） */
+  const [pollExhausted, setPollExhausted] = useState(false)
 
   // ms 反查：扫小程序码进入时，先拿 12 字符后缀换完整 matchId
   useEffect(() => {
@@ -105,6 +107,49 @@ export default function MatchDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [matchId])
+
+  /**
+   * 海报轮询：status=pending 时每 1500ms 拉一次 replay，最多 20 次
+   * 重试用户点「重试」时清 pollExhausted，重启轮询
+   */
+  useEffect(() => {
+    if (!matchId || !replay) return
+    if (replay.poster.status !== 'pending') return
+    if (pollExhausted) return
+
+    let count = 0
+    const MAX = 20
+    const timer = setInterval(async () => {
+      count++
+      if (count > MAX) {
+        clearInterval(timer)
+        setPollExhausted(true)
+        return
+      }
+      try {
+        const r = await matchApi.replay(matchId)
+        if (r.poster.status !== 'pending') {
+          setReplay(r)
+          clearInterval(timer)
+        }
+      } catch {
+        // 网络抖动忽略，下次再试
+      }
+    }, 1500)
+    return () => clearInterval(timer)
+  }, [matchId, replay, pollExhausted])
+
+  const handleRetryPoster = async () => {
+    if (!matchId) return
+    setPollExhausted(false)
+    try {
+      // 直接拉一次新数据；如果 server 端 24h 内已 ready 会立刻给 url
+      const r = await matchApi.replay(matchId)
+      setReplay(r)
+    } catch {
+      // ignore
+    }
+  }
 
   // 真正缺参（既没 id 也没 ms）
   if (!matchId && !ms) {
@@ -150,11 +195,19 @@ export default function MatchDetailPage() {
         ← 返回
       </View>
 
-      {/* 海报区：Phase A 始终展示占位 */}
+      {/* 海报区：pending → loading（或轮询超时给重试）；ready → 大图；failed → 静默兜底 */}
       <View className='md-poster-card'>
-        {poster.status === 'pending' && (
+        {poster.status === 'pending' && !pollExhausted && (
           <View className='md-poster-pending'>
             <LoadingState text='正在生成战报海报' variant='inline' />
+          </View>
+        )}
+        {poster.status === 'pending' && pollExhausted && (
+          <View className='md-poster-retry'>
+            <Text className='md-poster-retry-text'>海报生成中，稍后再试</Text>
+            <View className='md-poster-retry-btn' onClick={handleRetryPoster}>
+              点击重试
+            </View>
           </View>
         )}
         {poster.status === 'ready' && poster.url && (
