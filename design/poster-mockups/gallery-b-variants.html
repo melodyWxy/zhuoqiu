@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>击球帮 · 战报海报 B 版 · 变体压力测试</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#d4af37; --accent-light:#e8c967; --accent-bright:#f5d76e;
+    --bg-dark:#0a0f0d; --text-secondary:#a0a8a4; --text-muted:#6b7571;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{ background:#070a09; font-family:"Noto Sans SC",sans-serif; color:#e8eae9; padding:40px 24px 80px; }
+  h1.page-title{ font-size:22px; font-weight:700; text-align:center; margin-bottom:6px; }
+  p.page-sub{ text-align:center; color:#7a857f; font-size:13px; margin-bottom:36px; }
+  .stage{ display:flex; flex-wrap:wrap; gap:48px; justify-content:center; align-items:flex-start; }
+  .frame{ display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .frame .cap{ font-size:14px; color:#aeb6b1; max-width:378px; text-align:center; }
+  .frame .cap b{ color:#e8c967; }
+  .scaler{ width:378px; height:672px; overflow:hidden; border-radius:28px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+  .poster{ width:1080px; height:1920px; transform:scale(.35); transform-origin:top left; position:relative; overflow:hidden; }
+
+  /* ===== 版本 B 通用样式 ===== */
+  .B{ background:#0a0f0d; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+  .B .split{ position:absolute; inset:0;
+    background:linear-gradient(118deg,#213e4f 0%,#1a3340 38%,#0a0f0d 38%,#0a0f0d 62%,#3a2840 62%,#2c1f33 100%);
+    opacity:.55; }
+  .B .splitOne{ position:absolute; inset:0;
+    background:linear-gradient(150deg,#213e4f 0%,#162a22 45%,#0a0f0d 100%); opacity:.5; }
+  .B .glowtop{ position:absolute; top:-200px; left:50%; transform:translateX(-50%); width:900px; height:600px;
+    border-radius:50%; background:radial-gradient(circle,rgba(212,175,55,.22),transparent 65%); }
+  .B .inner{ position:relative; display:flex; flex-direction:column; align-items:center; padding:96px 60px 70px; flex:1; }
+  .B .kicker{ display:flex; align-items:center; gap:18px; color:var(--accent); font-family:"Oswald"; font-weight:600; font-size:40px; letter-spacing:10px; }
+  .B .kicker .dot{ width:14px; height:14px; border-radius:50%; background:var(--accent); }
+  .B .mtype{ margin-top:26px; color:#c9d1cc; font-size:34px; font-weight:500; letter-spacing:1px; }
+
+  /* 1v1 arena */
+  .B .arena{ margin-top:64px; width:100%; display:flex; align-items:center; justify-content:space-between; position:relative; }
+  .B .side{ display:flex; flex-direction:column; align-items:center; gap:24px; width:380px; }
+  .B .av{ width:240px; height:240px; border-radius:40px; display:flex; align-items:center; justify-content:center;
+    font-size:130px; font-weight:900; color:#fff; overflow:hidden; }
+  .B .side.l .av{ background:linear-gradient(150deg,#2f6280,#16303d); transform:rotate(-4deg);
+    box-shadow:0 24px 50px rgba(33,62,79,.6); border:4px solid rgba(120,190,225,.5); }
+  .B .side.r .av{ background:linear-gradient(150deg,#6a4a7a,#34203f); transform:rotate(4deg);
+    box-shadow:0 24px 50px rgba(58,40,64,.6); border:4px solid rgba(190,150,210,.5); }
+  .B .side.win .av{ border:6px solid var(--accent); box-shadow:0 0 60px rgba(212,175,55,.5); }
+  .B .nm{ font-size:46px; font-weight:900; color:#fff; max-width:380px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .B .tag{ font-family:"Oswald"; font-weight:500; font-size:30px; letter-spacing:3px; padding:6px 26px; border-radius:30px; }
+  .B .side.l .tag{ color:#8fd0ee; background:rgba(47,98,128,.35); }
+  .B .side.r .tag{ color:#cda7e0; background:rgba(106,74,122,.35); }
+  .B .side.win .tag{ color:#3a2c05; background:linear-gradient(180deg,var(--accent-bright),var(--accent)); }
+  .B .vsbadge{ position:absolute; top:60px; left:50%; transform:translateX(-50%); width:130px; height:130px;
+    border-radius:50%; background:linear-gradient(160deg,#1a2f23,#0a0f0d); border:4px solid var(--accent);
+    display:flex; align-items:center; justify-content:center; font-family:"Oswald"; font-weight:700; font-size:54px;
+    color:var(--accent); box-shadow:0 0 40px rgba(212,175,55,.4); }
+
+  .B .score{ margin-top:54px; display:flex; align-items:center; justify-content:center; gap:50px;
+    font-family:"Oswald"; font-weight:700; line-height:.9; }
+  .B .score .n{ font-size:340px; }
+  .B .score.wide .n{ font-size:240px; }      /* 两位数自动缩小 */
+  .B .score .n.l{ color:#7ec6ec; }
+  .B .score .n.r{ color:#c79fe0; }
+  .B .score .n.win{ color:var(--accent); text-shadow:0 0 50px rgba(212,175,55,.5); }
+  .B .score .sep{ font-size:200px; color:#3b4843; transform:translateY(-20px); }
+  .B .score.wide .sep{ font-size:150px; }
+
+  .B .verdict{ margin-top:30px; font-size:54px; font-weight:900; color:#fff; text-align:center;
+    max-width:920px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .B .verdict .em{ color:var(--accent); }
+  .B .chips{ margin-top:30px; display:flex; gap:22px; justify-content:center; }
+  .B .chip{ font-size:32px; color:#dfe6e1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+    padding:14px 34px; border-radius:40px; }
+
+  .B .foot{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; width:100%; padding-top:50px; }
+  .B .foot .brand{ display:flex; flex-direction:column; gap:6px; }
+  .B .foot .brand b{ font-size:40px; color:#fff; font-weight:900; }
+  .B .foot .brand span{ font-size:28px; color:var(--text-secondary); }
+  .B .foot .qr{ width:180px; height:180px; border-radius:28px; background:#fff; display:flex; align-items:center;
+    justify-content:center; font-size:100px; border:5px solid var(--accent); }
+
+  /* ===== 多人榜单（champion hero + ranked rows）===== */
+  .B .champ{ margin-top:54px; display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .B .champ .cav{ width:260px; height:260px; border-radius:46px; display:flex; align-items:center; justify-content:center;
+    font-size:140px; font-weight:900; color:#fff; background:linear-gradient(150deg,#2d4a3a,#16271d);
+    border:6px solid var(--accent); box-shadow:0 0 70px rgba(212,175,55,.5); }
+  .B .champ .cname{ font-size:56px; font-weight:900; color:#fff; }
+  .B .champ .ctag{ font-family:"Oswald"; font-weight:600; font-size:34px; letter-spacing:4px; color:#3a2c05;
+    background:linear-gradient(180deg,var(--accent-bright),var(--accent)); padding:10px 40px; border-radius:40px; }
+  .B .champ .cscore{ font-family:"Oswald"; font-weight:700; font-size:120px; color:var(--accent); line-height:1; }
+
+  .B .rows{ margin-top:46px; width:100%; display:flex; flex-direction:column; gap:22px; }
+  .B .row{ display:flex; align-items:center; gap:30px; background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08); border-radius:28px; padding:24px 36px; }
+  .B .row .rk{ font-family:"Oswald"; font-weight:700; font-size:56px; color:var(--text-muted); width:80px; }
+  .B .row .rav{ width:96px; height:96px; border-radius:24px; display:flex; align-items:center; justify-content:center;
+    font-size:52px; font-weight:900; color:#fff; background:linear-gradient(150deg,#33414a,#1c2429); }
+  .B .row .rnm{ flex:1; font-size:44px; font-weight:700; color:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .B .row .rsc{ font-family:"Oswald"; font-weight:700; font-size:64px; color:#cfd6d1; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">B 版 · 变体压力测试</h1>
+  <p class="page-sub">验证真实极端数据下不塌：超长名字 · 两位数比分 · 无头像 · 多人 · 八球</p>
+
+  <div class="stage">
+
+    <!-- 1) 标准 1v1（定稿基准） -->
+    <div class="frame">
+      <div class="cap"><b>① 标准 1v1</b> · 九球 · 险胜</div>
+      <div class="scaler"><div class="poster B">
+        <div class="split"></div><div class="glowtop"></div>
+        <div class="inner">
+          <div class="kicker"><i class="dot"></i>BATTLE REPORT<i class="dot"></i></div>
+          <div class="mtype">九球追分 · 房间 7K2M</div>
+          <div class="arena">
+            <div class="side l win"><div class="av">张</div><div class="nm">张三</div><div class="tag">WINNER</div></div>
+            <div class="vsbadge">VS</div>
+            <div class="side r"><div class="av">李</div><div class="nm">李四</div><div class="tag">2ND</div></div>
+          </div>
+          <div class="score"><span class="n l win">9</span><span class="sep">:</span><span class="n r">6</span></div>
+          <div class="verdict"><span class="em">张三</span> 险胜 李四</div>
+          <div class="chips"><div class="chip">⏱ 23 分钟</div><div class="chip">🟡 黄金9 ×1</div></div>
+          <div class="foot"><div class="brand"><b>击球帮</b><span>长按二维码 · 立刻看战报</span></div><div class="qr">▦</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 2) 超长名字 + 两位数比分 -->
+    <div class="frame">
+      <div class="cap"><b>② 压力：超长名字 + 两位数比分</b> · 名字截断 · 比分自动缩小</div>
+      <div class="scaler"><div class="poster B">
+        <div class="split"></div><div class="glowtop"></div>
+        <div class="inner">
+          <div class="kicker"><i class="dot"></i>BATTLE REPORT<i class="dot"></i></div>
+          <div class="mtype">九球追分 · 房间 X9QP</div>
+          <div class="arena">
+            <div class="side l win"><div class="av">球</div><div class="nm">球室王者一号选手</div><div class="tag">WINNER</div></div>
+            <div class="vsbadge">VS</div>
+            <div class="side r"><div class="av">新</div><div class="nm">新手小白练习生陪练</div><div class="tag">2ND</div></div>
+          </div>
+          <div class="score wide"><span class="n l win">11</span><span class="sep">:</span><span class="n r">9</span></div>
+          <div class="verdict"><span class="em">球室王者一号选手</span> 力克 新手小白练习生陪练</div>
+          <div class="chips"><div class="chip">⏱ 41 分钟</div><div class="chip">🟡 大金 ×2</div></div>
+          <div class="foot"><div class="brand"><b>击球帮</b><span>长按二维码 · 立刻看战报</span></div><div class="qr">▦</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 3) 多人榜单（4 人九球，无头像 emoji 兜底） -->
+    <div class="frame">
+      <div class="cap"><b>③ 多人榜单</b> · 4 人 · 冠军 hero + 名次列表（可扩展到 N 人）</div>
+      <div class="scaler"><div class="poster B">
+        <div class="splitOne"></div><div class="glowtop"></div>
+        <div class="inner">
+          <div class="kicker"><i class="dot"></i>BATTLE REPORT<i class="dot"></i></div>
+          <div class="mtype">九球追分 · 房间 7K2M · 4 人</div>
+          <div class="champ">
+            <div class="cav">王</div>
+            <div class="ctag">🏆 CHAMPION</div>
+            <div class="cname">王小五</div>
+            <div class="cscore">15</div>
+          </div>
+          <div class="rows">
+            <div class="row"><span class="rk">2</span><span class="rav">张</span><span class="rnm">张三</span><span class="rsc">11</span></div>
+            <div class="row"><span class="rk">3</span><span class="rav">🧍</span><span class="rnm">没头像的玩家</span><span class="rsc">8</span></div>
+            <div class="row"><span class="rk">4</span><span class="rav">李</span><span class="rnm">李四</span><span class="rsc">5</span></div>
+          </div>
+          <div class="foot"><div class="brand"><b>击球帮</b><span>长按二维码 · 立刻看战报</span></div><div class="qr">▦</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 4) 中式八球 1v1 -->
+    <div class="frame">
+      <div class="cap"><b>④ 中式八球</b> · 比分为胜场 · 大胜</div>
+      <div class="scaler"><div class="poster B">
+        <div class="split"></div><div class="glowtop"></div>
+        <div class="inner">
+          <div class="kicker"><i class="dot"></i>BATTLE REPORT<i class="dot"></i></div>
+          <div class="mtype">中式八球 · 房间 88BP</div>
+          <div class="arena">
+            <div class="side l win"><div class="av">赵</div><div class="nm">赵六</div><div class="tag">WINNER</div></div>
+            <div class="vsbadge">VS</div>
+            <div class="side r"><div class="av">钱</div><div class="nm">钱七</div><div class="tag">2ND</div></div>
+          </div>
+          <div class="score"><span class="n l win">7</span><span class="sep">:</span><span class="n r">2</span></div>
+          <div class="verdict"><span class="em">赵六</span> 大胜 钱七</div>
+          <div class="chips"><div class="chip">⏱ 35 分钟</div><div class="chip">🎱 9 局</div></div>
+          <div class="foot"><div class="brand"><b>击球帮</b><span>长按二维码 · 立刻看战报</span></div><div class="qr">▦</div></div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</body>
+</html>
