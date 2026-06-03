@@ -21,6 +21,8 @@ RUN npm config set registry https://registry.npmmirror.com && npm ci
 
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
+# 战报海报渲染用的 Oswald 静态字重（仅拉丁，~270KB）；nest build 不会带进 dist
+COPY assets ./assets
 
 RUN npx prisma generate
 RUN npm run build
@@ -46,6 +48,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/assets ./assets
 
 # 上传目录挂卷时会被覆盖，但创建目录防止启动报错
 RUN mkdir -p /app/uploads

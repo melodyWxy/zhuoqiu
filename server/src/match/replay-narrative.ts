@@ -35,6 +35,20 @@ export interface Narrative {
   type: 'nine_ball' | 'eight_ball'
 }
 
+/**
+ * 按分差挑一个有情绪的动词，替代千篇一律的"击败"。
+ * 海报上比分已是巨大主角，文案不再重复比分，只点出"赢得多漂亮"。
+ *   diff<=0 战平（时间到、比分相同）/ 1 险胜 / 2-3 力克 / 4-6 战胜 / >=7 大胜
+ * 平局调用方一般用"A 与 B 战平"的句式，这里也兜底返回"战平"保证函数自洽。
+ */
+export function pickVerb(diff: number): string {
+  if (diff <= 0) return '战平'
+  if (diff >= 7) return '大胜'
+  if (diff >= 4) return '战胜'
+  if (diff >= 2) return '力克'
+  return '险胜'
+}
+
 export function computeNarrative(input: NarrativeInput): Narrative {
   const isNineBall = input.type === MatchType.nine_ball
   const players = input.players.filter((p) => p.isCurrent)
@@ -50,7 +64,12 @@ export function computeNarrative(input: NarrativeInput): Narrative {
 
   let headline = '一场精彩对决'
   if (champion && runnerUp && ranked.length === 2) {
-    headline = `${champion.displayName} ${score(champion.slot)}:${score(runnerUp.slot)} 击败 ${runnerUp.displayName}`
+    const diff = score(champion.slot) - score(runnerUp.slot)
+    // 海报里比分已是主角，这里不再重复比分，改成按分差选词的一句话
+    headline =
+      diff === 0
+        ? `${champion.displayName} 与 ${runnerUp.displayName} 战平`
+        : `${champion.displayName} ${pickVerb(diff)} ${runnerUp.displayName}`
   } else if (champion && ranked.length > 2) {
     headline = `${champion.displayName} 拿下第一`
   }
