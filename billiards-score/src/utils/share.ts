@@ -40,8 +40,11 @@ export function buildMatchInviteShare(
   const label = type === 'nine_ball' ? '九球' : '中八'
   return {
     title: `${label}房间 ${roomCode}，进来记分？`,
-    path: `/pages/join/index?roomCode=${encodeURIComponent(roomCode)}`,
-    imageUrl: FALLBACK_COVER
+    // join 页读 router.params.code，必须用 code= 命名，否则落地后还要手填房间码
+    path: `/pages/join/index?code=${encodeURIComponent(roomCode)}`,
+    // imageUrl 留空 → 微信自动截当前页面顶部 5:4 区域当卡片图。
+    // 联机房间页中部就是「九球追分 + 房间码」big banner，比 81×81 tabbar logo 应景
+    imageUrl: undefined
   }
 }
 
