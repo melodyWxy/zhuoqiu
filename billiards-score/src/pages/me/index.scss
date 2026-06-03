@@ -415,7 +415,8 @@
 
 /* v2.22 累计战绩卡 */
 .stats-card {
-  margin: 12px 16px 0;
+  /* 与上下卡片保持 14px 间隔（和 .section margin-bottom 一致） */
+  margin: 14px 16px;
   padding: 16px;
   background: var(--bg-card);
   border: 1px solid var(--card-border);
@@ -464,6 +465,8 @@
   font-size: 26px;
   font-weight: 800;
   color: var(--accent);
+  /* 加阴影避免金色字在 bg-card 深绿底上视觉发糊 */
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   font-family: 'SF Mono', Menlo, monospace;
   line-height: 1;
 }

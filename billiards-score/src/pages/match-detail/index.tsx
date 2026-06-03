@@ -189,9 +189,23 @@ export default function MatchDetailPage() {
     Taro.previewImage({ urls: [poster.url], current: poster.url })
   }
 
+  /**
+   * 返回 fallback：当从分享卡片 / 小程序码 / scheme 直接进入时页面栈
+   * 深度为 1，navigateBack 会静默失败 → 兜底 switchTab 到首页。
+   */
+  const handleBack = () => {
+    Taro.navigateBack({
+      fail: () => {
+        Taro.switchTab({ url: '/pages/index/index' }).catch(() =>
+          Taro.reLaunch({ url: '/pages/index/index' })
+        )
+      }
+    })
+  }
+
   return (
     <View className='md-page'>
-      <View className='md-back' onClick={() => Taro.navigateBack()}>
+      <View className='md-back' onClick={handleBack}>
         ← 返回
       </View>
 
