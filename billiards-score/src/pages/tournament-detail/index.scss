@@ -1,6 +1,6 @@
 .tournament-detail-page {
   min-height: 100vh;
-  background: var(--bg-page, #0d1013);
+  background: var(--bg-page);
   padding: 14px 14px 96px;
   display: flex;
   flex-direction: column;
@@ -148,7 +148,7 @@
   right: 0;
   bottom: 0;
   padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-  background: var(--bg-page, #0d1013);
+  background: var(--bg-page);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -265,7 +265,7 @@
   }
 
   &.td-bracket-in_progress {
-    border-color: #60a5fa;
+    border-color: var(--info);
   }
 
   &.td-bracket-walkover {

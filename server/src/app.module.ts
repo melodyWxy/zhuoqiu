@@ -13,6 +13,8 @@ import { RealtimeModule } from './realtime/realtime.module'
 import { VenueModule } from './venue/venue.module'
 import { UploadModule } from './upload/upload.module'
 import { FeedbackModule } from './feedback/feedback.module'
+import { GeoModule } from './geo/geo.module'
+import { RegionsModule } from './regions/regions.module'
 
 @Module({
   imports: [
@@ -31,7 +33,9 @@ import { FeedbackModule } from './feedback/feedback.module'
     AdminModule,
     VenueModule,
     UploadModule,
-    FeedbackModule
+    FeedbackModule,
+    GeoModule,
+    RegionsModule
   ]
 })
 export class AppModule {}

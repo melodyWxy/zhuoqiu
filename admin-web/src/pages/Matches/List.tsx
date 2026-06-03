@@ -192,6 +192,30 @@ export default function MatchesList() {
               render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm:ss')
             },
             {
+              title: '战报',
+              width: 110,
+              render: (_, row) => {
+                if (row.replayStatus === 'ready' && row.replayPosterUrl) {
+                  return (
+                    <Tag color="success" style={{ cursor: 'pointer' }}>
+                      <a
+                        href={row.replayPosterUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'inherit' }}
+                      >
+                        ready
+                      </a>
+                    </Tag>
+                  )
+                }
+                if (row.replayStatus === 'pending') return <Tag color="processing">pending</Tag>
+                if (row.replayStatus === 'failed') return <Tag color="error">failed</Tag>
+                if (row.state === 'ended') return <Tag>未生成</Tag>
+                return <Tag>—</Tag>
+              }
+            },
+            {
               title: '操作',
               width: 100,
               render: (_, row) => (

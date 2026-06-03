@@ -27,6 +27,9 @@ interface VenueMeState {
   venue: {
     id: string
     name: string
+    province: string | null
+    city: string | null
+    district: string | null
     address: string
     status: string
     tablesCount: number
@@ -119,7 +122,7 @@ export default function Overview() {
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="地址" span={2}>
-            {v.address}
+            {`${v.province ?? ''}${v.city ?? ''}${v.district ?? ''}${v.address}`}
           </Descriptions.Item>
           <Descriptions.Item label="台桌总数">{v.tablesCount}</Descriptions.Item>
         </Descriptions>

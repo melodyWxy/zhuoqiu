@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Descriptions,
+  Image as AntImage,
   Modal,
   Space,
   Table,
@@ -106,6 +107,27 @@ export default function MatchDetail() {
         await matchesApi.forcePause(id, reason)
         message.success('已暂停')
         fetchAll()
+      }
+    })
+  }
+
+  const handleRegeneratePoster = () => {
+    if (!id) return
+    Modal.confirm({
+      title: '重新生成战报海报',
+      content: '将覆盖当前缓存重新拉头像 / 渲染 / 上传 OSS。耗时约 1-3 秒，确定继续？',
+      onOk: async () => {
+        try {
+          const r = await matchesApi.regeneratePoster(id)
+          if (r.posterUrl) {
+            message.success(`重生成完成：${r.status}`)
+          } else {
+            message.warning(`生成失败（status=${r.status}），看 server 日志`)
+          }
+          fetchAll()
+        } catch (e) {
+          message.error(`重生成异常：${(e as Error).message}`)
+        }
       }
     })
   }
@@ -236,6 +258,70 @@ export default function MatchDetail() {
                 ])
           ]}
         />
+      </Card>
+
+      {/* v2.22 战报海报 */}
+      <Card
+        style={{ marginBottom: 16 }}
+        title={
+          <Space>
+            战报海报
+            {detail.replayStatus === 'ready' && <Tag color="success">ready</Tag>}
+            {detail.replayStatus === 'pending' && <Tag color="processing">pending</Tag>}
+            {detail.replayStatus === 'failed' && <Tag color="error">failed</Tag>}
+            {!detail.replayStatus && <Tag>未生成</Tag>}
+          </Space>
+        }
+        extra={
+          canWrite && (
+            <Button onClick={handleRegeneratePoster}>
+              {detail.replayStatus === 'ready' ? '重新生成' : '生成海报'}
+            </Button>
+          )
+        }
+      >
+        <Space size={24} align="start" wrap>
+          {detail.replayPosterUrl ? (
+            <div>
+              <AntImage
+                src={detail.replayPosterUrl}
+                width={180}
+                style={{ borderRadius: 8 }}
+                placeholder
+              />
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>海报</Text>
+              </div>
+            </div>
+          ) : (
+            <Text type="secondary">海报未生成</Text>
+          )}
+          {detail.replayQrUrl && (
+            <div>
+              <AntImage
+                src={detail.replayQrUrl}
+                width={120}
+                style={{ borderRadius: 8 }}
+                placeholder
+              />
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>小程序码</Text>
+              </div>
+            </div>
+          )}
+        </Space>
+        <Descriptions column={2} size="small" style={{ marginTop: 16 }}>
+          {detail.replayGeneratedAt && (
+            <Descriptions.Item label="生成时间">
+              {dayjs(detail.replayGeneratedAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
+          )}
+          {detail.replayFailedReason && (
+            <Descriptions.Item label="失败原因" span={2}>
+              <Text type="danger">{detail.replayFailedReason}</Text>
+            </Descriptions.Item>
+          )}
+        </Descriptions>
       </Card>
 
       <Card

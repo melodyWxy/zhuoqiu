@@ -61,3 +61,7 @@ coverage/
 *.tsbuildinfo
 .eslintcache
 .env
+
+# admin-web vite.config.ts 的 tsc 编译副产物（不该入仓）
+/admin-web/vite.config.js
+/admin-web/vite.config.d.ts

@@ -1,7 +1,8 @@
 .mhs-mask {
+  /* 与其他 4 个弹窗对齐到 0.55（之前是 0.6，差异不可见但破坏一致性） */
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -12,10 +13,10 @@
   width: 100%;
   max-width: 520px;
   height: 72vh;
-  background: #1a2f23;
+  background: var(--primary);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  color: #fff;
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -31,13 +32,13 @@
   display: block;
   font-size: 16px;
   font-weight: 700;
-  color: #d4af37;
+  color: var(--accent);
 }
 
 .mhs-hint {
   display: block;
   font-size: 11px;
-  color: #a0a8a4;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
@@ -46,10 +47,10 @@
   right: 12px;
   top: 12px;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.08);
   font-size: 12px;
-  color: #d4af37;
+  color: var(--accent);
   cursor: pointer;
   &:active { opacity: 0.8; }
 }
@@ -63,7 +64,7 @@
   display: block;
   text-align: center;
   font-size: 13px;
-  color: #a0a8a4;
+  color: var(--text-secondary);
   padding: 40px 0;
 }
 
@@ -89,14 +90,14 @@
 }
 
 .mhs-seq {
-  color: #d4af37;
+  color: var(--accent);
   font-weight: 600;
   font-size: 11px;
   font-family: 'SF Mono', Menlo, monospace;
 }
 
 .mhs-time {
-  color: #a0a8a4;
+  color: var(--text-secondary);
   font-size: 11px;
   font-family: 'SF Mono', Menlo, monospace;
   margin-top: 2px;
@@ -119,10 +120,10 @@
 
 .mhs-actor {
   font-size: 11px;
-  color: #d4af37;
+  color: var(--accent);
   font-weight: 600;
   &.is-admin {
-    color: #ef4444;
+    color: var(--error);
     background: rgba(239, 68, 68, 0.12);
     padding: 1px 6px;
     border-radius: 4px;
@@ -130,7 +131,7 @@
 }
 
 .mhs-desc {
-  color: #fff;
+  color: var(--text-primary);
   line-height: 1.4;
   word-break: break-all;
   font-size: 13px;
@@ -138,7 +139,7 @@
 
 .mhs-undone-tag {
   font-size: 10px;
-  color: #ef4444;
+  color: var(--error);
   background: rgba(239, 68, 68, 0.12);
   padding: 1px 6px;
   border-radius: 4px;

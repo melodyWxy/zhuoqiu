@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import {
   tournamentsPublicApi,
@@ -8,6 +8,9 @@ import {
   type VenuePublic
 } from '../../core/api/venue'
 import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import LoadingState from '../../components/LoadingState'
+import { buildVenueShare, buildVenueTimelineShare } from '../../utils/share'
 import './index.scss'
 
 const DAY_LABEL: Record<string, string> = {
@@ -28,6 +31,31 @@ export default function VenueDetailPage() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  /** 分享给好友 / 朋友圈 —— venue 加载完才能给真实标题，未加载时给兜底 */
+  useShareAppMessage(() => {
+    if (venue) {
+      return buildVenueShare({
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        coverImage: venue.coverImage
+      })
+    }
+    return { title: '球房 · 击球帮', path: `/pages/venue-detail/index?id=${id}` }
+  })
+
+  useShareTimeline(() => {
+    if (venue) {
+      return buildVenueTimelineShare({
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        coverImage: venue.coverImage
+      })
+    }
+    return { title: '球房 · 击球帮' }
+  })
 
   useEffect(() => {
     if (!id) {
@@ -69,18 +97,28 @@ export default function VenueDetailPage() {
     })
   }
 
+  const fullAddress = venue
+    ? `${venue.province ?? ''}${venue.city ?? ''}${venue.district ?? ''}${venue.address}`
+    : ''
+
   const handleCopyAddress = () => {
     if (!venue) return
-    Taro.setClipboardData({ data: venue.address }).then(() =>
+    Taro.setClipboardData({ data: fullAddress }).then(() =>
       Taro.showToast({ title: '地址已复制', icon: 'none' })
     )
   }
 
   if (loading) {
-    return <View className='vd-empty'>加载中…</View>
+    return <LoadingState text='正在加载球房' />
   }
   if (error || !venue) {
-    return <View className='vd-empty'>{error ?? '球房不存在'}</View>
+    return (
+      <EmptyState
+        icon='⚠️'
+        title='球房不存在'
+        description={error ?? '可能链接已失效，回到球房列表换一个吧'}
+      />
+    )
   }
 
   const hours = venue.openHoursJson ?? {}
@@ -110,7 +148,7 @@ export default function VenueDetailPage() {
         </View>
         <View className='vd-meta-row' onClick={handleCopyAddress}>
           <Text className='vd-icon'>📍</Text>
-          <Text className='vd-meta-text'>{venue.address}</Text>
+          <Text className='vd-meta-text'>{fullAddress}</Text>
         </View>
         <View className='vd-meta-row' onClick={handleCall}>
           <Text className='vd-icon'>☎️</Text>

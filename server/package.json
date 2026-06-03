@@ -14,12 +14,14 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
+    "backfill:venue-city": "ts-node scripts/backfill-venue-city.ts",
     "db:setup": "prisma migrate deploy && ts-node prisma/seed.ts",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
     "@alicloud/pop-core": "^1.8.0",
+    "@napi-rs/canvas": "^1.0.0",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^10.3.0",

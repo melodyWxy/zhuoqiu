@@ -12,11 +12,11 @@
 .avatar-picker-box {
   width: 100%;
   max-width: 340px;
-  background: #1a2f23;
+  background: var(--primary);
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 14px;
   padding: 22px 20px 16px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .avatar-picker-title {
@@ -48,7 +48,7 @@
   &:active { transform: scale(0.95); }
 
   &.active {
-    border-color: #d4af37;
+    border-color: var(--accent);
     background: rgba(212, 175, 55, 0.15);
   }
 }
@@ -59,11 +59,12 @@
 }
 
 .avatar-picker-cancel {
-  padding: 12px;
+  /* 触达 ≥44px：14 padding + 15 font ≈ 47 */
+  padding: 14px;
   text-align: center;
   background: rgba(255, 255, 255, 0.08);
-  color: #a0a8a4;
-  border-radius: 8px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
   font-size: 15px;
   font-weight: 600;
 

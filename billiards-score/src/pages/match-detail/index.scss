@@ -1,116 +1,288 @@
 .md-page {
   min-height: 100vh;
-  padding: 20px 16px 40px;
+  padding: 16px 16px 100px; /* 底部留 floating 分享按钮空间 */
   background: linear-gradient(180deg, var(--primary-dark) 0%, var(--bg-dark) 100%);
   color: var(--text-primary);
-}
-
-.md-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
 }
 
 .md-back {
   font-size: 14px;
   color: var(--accent);
-  align-self: flex-start;
-  padding: 4px 0;
+  padding: 6px 0 10px;
+
+  &:active { opacity: var(--opacity-active); }
 }
 
-.md-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
+/* 海报区域 */
+.md-poster-card {
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.md-sub {
+.md-poster-pending {
+  width: 100%;
+  padding: 30px 0;
+}
+
+.md-poster-img {
+  width: 100%;
+  display: block;
+}
+
+.md-poster-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 20px;
+  opacity: 0.85;
+}
+
+.md-poster-failed-icon { font-size: 36px; }
+.md-poster-failed-text { font-size: 12px; color: var(--text-secondary); }
+
+/* 轮询超时的「点击重试」UI */
+.md-poster-retry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 20px;
+}
+
+.md-poster-retry-text {
   font-size: 13px;
   color: var(--text-secondary);
 }
 
-.md-summary {
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 12px;
-  padding: 14px 16px;
+.md-poster-retry-btn {
+  padding: 8px 20px;
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:active { opacity: var(--opacity-active); }
+}
+
+/* 标题卡 */
+.md-headline-card {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
+  box-shadow: var(--card-shadow);
 }
 
-.md-summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.md-summary-label { font-size: 13px; color: var(--text-secondary); }
-.md-summary-value { font-size: 14px; font-weight: 600; }
-.md-summary-value.champion { color: var(--accent); font-size: 16px; }
-
-.md-section-title {
-  display: block;
-  font-size: 14px;
+.md-type-tag {
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 1px;
   font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
 }
 
-.md-players,
-.md-events {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  padding: 14px 16px;
+.md-headline {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.md-subline {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.md-endedat {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', Menlo, monospace;
+  margin-top: 2px;
+}
+
+/* 玩家比分卡 */
+.md-players-card {
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
   margin-bottom: 14px;
+  box-shadow: var(--card-shadow);
 }
 
 .md-player-row {
-  display: grid;
-  grid-template-columns: 70px 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 12px;
+  padding: 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
   &:last-child { border-bottom: none; }
+
+  &.is-champion .md-player-name {
+    color: var(--accent);
+  }
 }
 
-.md-slot { font-size: 12px; color: var(--text-secondary); }
+.md-avatar-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.md-avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: block;
+}
+
+.md-avatar-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.md-champion-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 18px;
+  background: var(--bg-dark);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--accent);
+}
+
+.md-player-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
 
 .md-player-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.md-score-block {
+.md-player-stats {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.md-score {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--accent);
-  line-height: 1;
-  font-family: 'SF Mono', 'Menlo', monospace;
-}
-
-.md-stats {
-  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+.md-stat-chip {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.md-player-stats-label {
   font-size: 11px;
   color: var(--text-secondary);
 }
 
+.md-score {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: 'SF Mono', Menlo, monospace;
+  line-height: 1;
+  flex-shrink: 0;
+
+  &.is-champion {
+    color: var(--accent);
+    font-size: 42px;
+  }
+}
+
+/* 元信息卡 */
+.md-meta-card {
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.md-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.md-meta-label { font-size: 13px; color: var(--text-secondary); }
+.md-meta-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+/* 折叠事件入口 */
+.md-events-fold {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+
+  &:active { opacity: var(--opacity-active); }
+}
+
+.md-events-fold-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.md-events-fold-arrow {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.md-events {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  margin-bottom: 14px;
+}
+
 .md-empty {
+  display: block;
   padding: 20px;
   text-align: center;
   color: var(--text-secondary);
@@ -119,9 +291,8 @@
 
 .md-event-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
@@ -136,33 +307,55 @@
 .md-event-seq {
   font-size: 11px;
   color: var(--text-secondary);
-  font-family: 'SF Mono', monospace;
-  min-width: 32px;
+  font-family: 'SF Mono', Menlo, monospace;
+  min-width: 36px;
 }
 
 .md-event-time {
   font-size: 11px;
   color: var(--text-secondary);
+  font-family: 'SF Mono', Menlo, monospace;
 }
 
 .md-event-type {
   font-size: 13px;
-  font-weight: 600;
   color: var(--text-primary);
-}
-
-.md-event-payload {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-family: 'SF Mono', monospace;
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .md-event-undone {
   font-size: 11px;
   color: var(--warning);
+}
+
+/* floating 分享按钮 */
+.md-share-fab {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 9;
+  max-width: 448px; /* page max-width 480 - margin 32 */
+  margin: 0 auto;
+}
+
+.md-share-btn {
+  width: 100%;
+  box-sizing: border-box;
+  height: 52px;
+  line-height: 52px;
+  padding: 0;
+  background: var(--accent);
+  color: var(--primary-dark);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: none;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.45);
+
+  &::after { border: none; }
+
+  &--hover {
+    opacity: var(--opacity-active);
+  }
 }

@@ -7,6 +7,8 @@ import {
   type TournamentStatus
 } from '../../core/api/venue'
 import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import LoadingState from '../../components/LoadingState'
 import './index.scss'
 
 const STATUS_LABEL: Record<TournamentStatus, { text: string; color: string }> = {
@@ -89,9 +91,17 @@ export default function TournamentsPage() {
       <View className='tp-meta'>共 {total} 场</View>
 
       {loading ? (
-        <View className='tp-empty'>加载中…</View>
+        <LoadingState text='正在加载赛事' />
       ) : items.length === 0 ? (
-        <View className='tp-empty'>暂无赛事</View>
+        <EmptyState
+          icon='🏆'
+          title='暂无赛事'
+          description={
+            filter === 'all'
+              ? '附近球房还没有发布赛事，过段时间再来看看'
+              : '当前筛选下没有赛事，切到「全部」试试'
+          }
+        />
       ) : (
         <View className='tp-list'>
           {items.map((t) => (

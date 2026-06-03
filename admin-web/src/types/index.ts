@@ -32,6 +32,9 @@ export interface MatchPlayerRow {
   isCurrent: boolean
 }
 
+/** v2.22 战报海报状态 */
+export type ReplayStatus = 'pending' | 'ready' | 'failed'
+
 export interface MatchListItem {
   id: string
   code: string | null
@@ -42,6 +45,9 @@ export interface MatchListItem {
   createdAt: string
   endedAt: string | null
   players: MatchPlayerRow[]
+  /** v2.22 战报海报：可能为 null（未生成 / 还在 pending） */
+  replayStatus?: ReplayStatus | null
+  replayPosterUrl?: string | null
 }
 
 export interface MatchDetail {
@@ -63,6 +69,12 @@ export interface MatchDetail {
   endedAt: string | null
   endedBy: string | null
   endedReason: string | null
+  /** v2.22 战报海报字段 */
+  replayStatus?: ReplayStatus | null
+  replayPosterUrl?: string | null
+  replayQrUrl?: string | null
+  replayGeneratedAt?: string | null
+  replayFailedReason?: string | null
 }
 
 export interface MatchEventItem {

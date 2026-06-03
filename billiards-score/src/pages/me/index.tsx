@@ -6,7 +6,7 @@ import { useMatchStore, MatchRecord } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
 import { authApi, meApi } from '../../core/api/auth'
 import { venueAuthApi } from '../../core/api/venue'
-import { matchApi, MatchDetail } from '../../core/api/match'
+import { matchApi, MatchDetail, MyStats } from '../../core/api/match'
 import { formatElapsed } from '../../core/game/timer'
 import InputModal from '../../components/InputModal'
 import { isAvatarUrl } from '../../utils/avatar'
@@ -99,6 +99,8 @@ export default function MePage() {
   const [tab, setTab] = useState<'cloud' | 'local'>('cloud')
   const [cloudHistory, setCloudHistory] = useState<CloudHistoryItem[]>([])
   const [savingProfile, setSavingProfile] = useState(false)
+  /** v2.22 累计战绩 */
+  const [stats, setStats] = useState<MyStats | null>(null)
 
   // 加载云端历史
   const loadCloudHistory = async () => {
@@ -111,18 +113,37 @@ export default function MePage() {
     }
   }
 
+  // 加载累计战绩
+  const loadStats = async () => {
+    if (!cloudUser) {
+      setStats(null)
+      return
+    }
+    try {
+      const s = await matchApi.myStats()
+      setStats(s)
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     if (cloudUser) {
       setTab('cloud')
       loadCloudHistory()
+      loadStats()
     } else {
       setTab('local')
+      setStats(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudUser?.id])
 
   useDidShow(() => {
-    if (cloudUser) loadCloudHistory()
+    if (cloudUser) {
+      loadCloudHistory()
+      loadStats()
+    }
   })
 
   // 当前展示用的昵称/头像（登录态优先云端，未登录用本地）
@@ -324,6 +345,62 @@ export default function MePage() {
           </Text>
         )}
       </View>
+
+      {/* v2.22 累计战绩（仅登录态显示，且至少打过 1 场） */}
+      {cloudUser && stats && stats.totalMatches > 0 && (
+        <View className='stats-card'>
+          <View className='stats-header'>
+            <Text className='stats-title'>📊 战绩</Text>
+            <Text className='stats-rate'>胜率 {stats.winRate}%</Text>
+          </View>
+          <View className='stats-summary-row'>
+            <View className='stats-cell'>
+              <Text className='stats-num'>{stats.totalMatches}</Text>
+              <Text className='stats-label'>出场</Text>
+            </View>
+            <View className='stats-cell'>
+              <Text className='stats-num'>{stats.wins}</Text>
+              <Text className='stats-label'>胜场</Text>
+            </View>
+            {stats.nineBall.matches > 0 && (
+              <View className='stats-cell'>
+                <Text className='stats-num'>{stats.nineBall.highScore}</Text>
+                <Text className='stats-label'>九球最高</Text>
+              </View>
+            )}
+          </View>
+          {stats.nineBall.matches > 0 && (
+            <View className='stats-detail'>
+              <Text className='stats-detail-title'>九球累计</Text>
+              <View className='stats-chips'>
+                {stats.nineBall.golden9 > 0 && (
+                  <Text className='stats-chip'>👑 黄金9 ×{stats.nineBall.golden9}</Text>
+                )}
+                {stats.nineBall.bigJack > 0 && (
+                  <Text className='stats-chip'>💎 大金 ×{stats.nineBall.bigJack}</Text>
+                )}
+                {stats.nineBall.smallJack > 0 && (
+                  <Text className='stats-chip'>🏅 小金 ×{stats.nineBall.smallJack}</Text>
+                )}
+                {stats.nineBall.normalWin > 0 && (
+                  <Text className='stats-chip'>✅ 普胜 ×{stats.nineBall.normalWin}</Text>
+                )}
+              </View>
+            </View>
+          )}
+          {stats.eightBall.matches > 0 && (
+            <View className='stats-detail'>
+              <Text className='stats-detail-title'>中八累计</Text>
+              <View className='stats-chips'>
+                <Text className='stats-chip'>
+                  打了 {stats.eightBall.matches} 场，赢 {stats.eightBall.wins} 场，
+                  累计胜局 {stats.eightBall.totalWinRounds}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* 球房管理模式入口（已登录商家时显示；未登录商家由 ⋯ 菜单进入） */}
       {venueSession && (

@@ -33,6 +33,15 @@ export class ApplicationPayloadDto {
   @IsString() @Matches(/^\+?\d{8,15}$/)
   contactPhone!: string
 
+  @IsString() @Length(2, 32)
+  province!: string
+
+  @IsString() @Length(2, 32)
+  city!: string
+
+  @IsString() @Length(2, 32)
+  district!: string
+
   @IsString() @Length(2, 255)
   address!: string
 

@@ -104,7 +104,8 @@ export class WechatService {
     return json.phone_info
   }
 
-  private async getStableAccessToken(): Promise<string> {
+  /** v2.22 战报系统 wxacode 生成需要复用 access_token，给一个公开访问入口 */
+  async getStableAccessToken(): Promise<string> {
     const now = Date.now()
     if (this.accessTokenCache && this.accessTokenCache.expiresAt > now + 60_000) {
       return this.accessTokenCache.token

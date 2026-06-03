@@ -1,6 +1,6 @@
 .venues-page {
   min-height: 100vh;
-  background: var(--bg-page, #0d1013);
+  background: var(--bg-page);
   padding: 12px 14px 24px;
   display: flex;
   flex-direction: column;
@@ -15,16 +15,20 @@
 
 .vp-search-input {
   flex: 1;
+  /* 用 height 而不是堆 padding —— weapp 上 padding 会让 placeholder 偏移 */
+  height: 44px;
+  box-sizing: border-box;
   background: var(--bg-card);
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 0 14px;
   font-size: 14px;
   color: var(--text-primary);
 }
 
 .vp-search-btn {
-  padding: 0 16px;
+  height: 44px;
+  padding: 0 18px;
   background: var(--accent);
   color: var(--primary-dark);
   border-radius: 10px;
@@ -34,6 +38,59 @@
   align-items: center;
 
   &:active { opacity: 0.85; }
+}
+
+.vp-region-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.vp-region-cell {
+  flex: 1;
+  /* 触达 ≥44px：与 vp-search-input 同档，之前 padding 8 + 13px 字号高仅 ≈32px */
+  height: 44px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.is-disabled {
+    opacity: var(--opacity-disabled);
+  }
+
+  &:active:not(.is-disabled) {
+    background: var(--bg-card-strong);
+  }
+}
+
+.vp-region-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vp-region-arrow {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.vp-clear-btn {
+  font-size: 13px;
+  color: var(--accent);
+  padding: 10px 12px;
+  &:active { opacity: 0.7; }
 }
 
 .vp-meta {
@@ -57,7 +114,7 @@
 
 .vp-card {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   gap: 12px;

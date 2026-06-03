@@ -1,10 +1,12 @@
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useState } from 'react'
 import { useEightBallStore } from '../../core/game/eightBallStore'
 import { useMatchStore } from '../../core/match/store'
 import { useAuthStore } from '../../core/auth/store'
 import { useUserStore } from '../../core/user/store'
+import { matchApi } from '../../core/api/match'
+import { buildMatchInviteShare } from '../../utils/share'
 import GameToolbar from '../../components/GameToolbar'
 import InputModal from '../../components/InputModal'
 import OnlineEightBall from './OnlineMode'
@@ -13,6 +15,18 @@ import './index.scss'
 export default function EightBallPage() {
   const router = useRouter()
   const matchId = router.params.matchId as string | undefined
+
+  useShareAppMessage(async () => {
+    if (!matchId) return { title: '中八记分 · 击球帮', path: '/pages/index/index' }
+    try {
+      const d = await matchApi.detail(matchId)
+      if (d.code) return buildMatchInviteShare('eight_ball', d.code)
+    } catch {
+      // 拿不到 detail 也别让分享失败
+    }
+    return { title: '中八记分 · 击球帮', path: '/pages/index/index' }
+  })
+
   if (matchId) return <OnlineEightBall matchId={matchId} />
   return <LocalEightBall />
 }

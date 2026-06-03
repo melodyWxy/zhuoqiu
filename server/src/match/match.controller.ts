@@ -59,9 +59,27 @@ export class MatchController {
     )
   }
 
+  /**
+   * v2.22 战报小程序码 scene 反查：传 matchId 后缀（12 字符），返回完整 id
+   * 公开接口；找不到 / 多个命中返回 null（前端兜底回首页）
+   */
+  @Get('matches/by-suffix/:suffix')
+  async byIdSuffix(@Param('suffix') suffix: string) {
+    return this.matchService.findByIdSuffix(suffix)
+  }
+
   @Get('matches/:idOrCode')
   async detail(@Param('idOrCode') idOrCode: string) {
     return this.matchService.detail(idOrCode)
+  }
+
+  /**
+   * 战报数据：detail + 叙事文案 + 海报状态。
+   * 公开接口（matchId 是长哈希不易猜，分享给陌生人能打开是基本诉求）
+   */
+  @Get('matches/:idOrCode/replay')
+  async replay(@Param('idOrCode') idOrCode: string) {
+    return this.matchService.replay(idOrCode)
   }
 
   @Get('matches/:id/events')
@@ -149,5 +167,15 @@ export class MatchController {
   async myActiveMatch(@CurrentUser() user: UserJwtPayload) {
     const match = await this.matchService.findMyActiveMatch(user.sub)
     return { match }
+  }
+
+  /**
+   * v2.22 战绩聚合：登录用户自己的累计战绩
+   * （admin 反查其他用户战绩留 TODO，本期不做）
+   */
+  @Get('me/stats')
+  @UseGuards(UserAuthGuard)
+  async myStats(@CurrentUser() user: UserJwtPayload) {
+    return this.matchService.myStats(user.sub)
   }
 }

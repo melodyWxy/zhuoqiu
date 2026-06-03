@@ -653,7 +653,15 @@ export class TournamentService {
     }
     const venue = await this.prisma.venue.findUnique({
       where: { id: t.venueId },
-      select: { id: true, name: true, address: true, coverImage: true }
+      select: {
+        id: true,
+        name: true,
+        province: true,
+        city: true,
+        district: true,
+        address: true,
+        coverImage: true
+      }
     })
     return { ...this.projectListItem(t), venue, noticeText: t.noticeText }
   }

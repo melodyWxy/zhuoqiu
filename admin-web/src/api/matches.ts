@@ -46,5 +46,13 @@ export const matchesApi = {
     http.post(`/admin/matches/${id}/force-end`, { reason }),
 
   kick: (id: string, userId: string, reason: string) =>
-    http.post(`/admin/matches/${id}/kick`, { userId, reason })
+    http.post(`/admin/matches/${id}/kick`, { userId, reason }),
+
+  /** v2.22 战报海报：admin 强制重新生成 */
+  regeneratePoster: (id: string) =>
+    http
+      .post<{ ok: boolean; posterUrl: string | null; status: string }>(
+        `/admin/matches/${id}/poster`
+      )
+      .then((r) => r.data as unknown as { ok: boolean; posterUrl: string | null; status: string })
 }

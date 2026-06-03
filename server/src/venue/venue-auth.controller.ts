@@ -99,6 +99,9 @@ export class VenueAuthController {
         ? {
             id: venue.id,
             name: venue.name,
+            province: venue.province,
+            city: venue.city,
+            district: venue.district,
             address: venue.address,
             status: venue.status,
             tablesCount: venue.tablesCount

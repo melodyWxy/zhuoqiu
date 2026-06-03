@@ -1,6 +1,7 @@
-/* CSS 变量同时挂在 page（weapp 根） + :root（H5/web 根），保证 H5 上不丢色板 */
-page,
-:root {
+/* SCSS mixin：把色板 var 一次性铺到一个选择器上。
+   weapp 和 H5 各用自己的根选择器去 include，避免 `page, :root` 这种复合
+   选择器在 weapp WXSS 解析器里被整条丢掉。 */
+@mixin color-tokens {
   --primary: #1a2f23;
   --primary-light: #2d4a3a;
   --primary-dark: #0f1f17;
@@ -19,29 +20,78 @@ page,
   --warning: #fbbf24;
   --error: #ef4444;
   --info: #60a5fa;
+  --info-deep: #3b82f6;   /* 联机观众按钮等饱和蓝 */
+  --info-light: #93c5fd;  /* 联机标题浅蓝 */
+  --accent-bright: #f5d76e; /* 九球金球渐变高光 */
+  /* 页面 wrapper 背景：比 --bg-dark 略偏冷，给浮于其上的卡片留对比 */
+  --bg-page: #0d1013;
   /* 玩家卡 slot 配色：与 --bg-dark 都有明显对比，保留台球桌深色基调 */
   --slot-1: #1f3a4a; /* 冷蓝 */
   --slot-2: #3a2840; /* 暖紫 */
   --slot-3: #2f3d22; /* 苔绿 */
   --slot-4: #4a2e26; /* 砖红 */
+
+  /* 状态 / 层级 token (刀 C) —— 散落硬编码统一收口 */
+  --opacity-disabled: 0.4;
+  --opacity-active: 0.85;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-size-caption: 12px;
+  --font-size-body: 14px;
+  --font-size-title: 16px;
+  --font-size-heading: 20px;
 }
 
-/* weapp：page 根节点本身承载底色与字号 */
+/* 复用片段（消费者直接 copy 用，本项目 SCSS 没接通 @use，故不写 mixin）：
+ *
+ * 单行截断：
+ *   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+ *
+ * 双行截断：
+ *   display: -webkit-box; -webkit-line-clamp: 2;
+ *   -webkit-box-orient: vertical; overflow: hidden;
+ *
+ * 弹窗遮罩 (居中)：
+ *   position: fixed; inset: 0; z-index: 9999;
+ *   background: rgba(0, 0, 0, 0.55);
+ *   display: flex; align-items: center; justify-content: center;
+ *
+ * 底部 sheet 遮罩 (贴底)：把 align-items 改成 flex-end 即可。
+ *
+ * 改这些片段时，请同步 5 个弹窗组件 (InputModal / LoginSheet /
+ * AvatarPickerModal / FeedbackModal / MatchHistorySheet)。
+ */
+
+/* weapp 根：page 是 wxss 的根伪元素。
+   平板 / 折叠屏 resizable=true 时窗口会撑满全屏，max-width 把内容压到手机宽度
+   居中显示，两侧露出 page 自身深色背景。 */
 page {
+  @include color-tokens;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
-
   font-size: 32rpx;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* H5：page 选择器不命中任何元素，给 html/body 兜底深色背景 */
-html,
+/* H5 根：body 挂变量 + 背景色，桌面浏览器同样限宽居中。
+   html 兜底背景，避免 body 居中后两侧露出浏览器默认白色。 */
+html {
+  background-color: #0a0f0d;
+}
+
 body {
+  @include color-tokens;
   background-color: var(--bg-dark);
   color: var(--text-primary);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .container {

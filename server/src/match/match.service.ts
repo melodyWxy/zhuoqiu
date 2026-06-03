@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
+import { ReplayJobService } from './replay-job.service'
 import {
   MatchState,
   MatchType,
   Prisma,
+  ReplayStatus,
   User
 } from '@prisma/client'
+import { computeNarrative } from './replay-narrative'
 import { PrismaService } from '../prisma/prisma.service'
 import { RealtimeService } from '../realtime/realtime.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
@@ -52,7 +55,9 @@ export class MatchService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly realtime: RealtimeService
+    private readonly realtime: RealtimeService,
+    @Inject(forwardRef(() => ReplayJobService))
+    private readonly replayJob: ReplayJobService
   ) {}
 
   // ============ 创建 ============
@@ -155,6 +160,29 @@ export class MatchService {
     return match
   }
 
+  /**
+   * v2.22 战报小程序码 scene 反查：matchId 后 12 字符 → 完整 matchId
+   *
+   * 海报上的小程序码 scene 是 `m=xxxxx`（matchId 后 12 字符），扫码进
+   * weapp 后 app.tsx onLaunch 解析 → 拿后缀去 server 反查完整 matchId →
+   * navigateTo 到战报页。
+   *
+   * 碰撞概率：matchId 用 nanoid 32 字符 base62，后 12 字符约 62^12 ≈ 3×10^21
+   * 空间，与全表行数比远低于碰撞阈值。多于 1 条命中返回 null（让前端兜底
+   * 到首页）。
+   */
+  async findByIdSuffix(suffix: string): Promise<{ id: string } | null> {
+    if (!suffix || suffix.length < 6 || suffix.length > 16) return null
+    // 用 endsWith 通过 ILIKE 实现（PG 字段无索引会全表扫；matchId 表通常
+    // 不会超过百万级，全表扫可接受。如果将来量大，给 matches.id 加 reverse
+    // index 或拆字段即可）
+    const matches = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM matches WHERE id LIKE ${'%' + suffix} LIMIT 2
+    `
+    if (matches.length !== 1) return null
+    return matches[0] ?? null
+  }
+
   private async detailFromTx(tx: Prisma.TransactionClient | PrismaService, matchId: string) {
     const match = await tx.match.findUnique({
       where: { id: matchId },
@@ -228,7 +256,57 @@ export class MatchService {
       owner: match.owner,
       endedAt: match.endedAt,
       endedBy: match.endedBy,
-      endedReason: match.endedReason
+      endedReason: match.endedReason,
+      // v2.22 战报海报字段（admin / weapp 都可以读这些；weapp 主要走
+      // replay() 接口，admin 用 /admin/matches/:id 读 detail 即可看到）
+      replayStatus: match.replayStatus,
+      replayPosterUrl: match.replayPosterUrl,
+      replayQrUrl: match.replayQrUrl,
+      replayGeneratedAt: match.replayGeneratedAt,
+      replayFailedReason: match.replayFailedReason
+    }
+  }
+
+  /**
+   * 战报：detail + 叙事文案 + 海报状态
+   *
+   * 海报字段从 Match 表的 replayStatus / replayPosterUrl / replayQrUrl 读，
+   * generate job (ReplayJobService) 负责异步 fill。
+   */
+  async replay(matchIdOrCode: string) {
+    const detail = await this.detail(matchIdOrCode)
+    const narrative = computeNarrative({
+      type: detail.type,
+      players: detail.players,
+      computed: detail.computed,
+      timer: detail.timer
+    })
+
+    // 读海报状态
+    const posterRow = await this.prisma.match.findUnique({
+      where: { id: detail.id },
+      select: {
+        replayStatus: true,
+        replayPosterUrl: true,
+        replayQrUrl: true,
+        replayFailedReason: true
+      }
+    })
+
+    return {
+      detail,
+      narrative,
+      poster: {
+        status: (posterRow?.replayStatus ?? ReplayStatus.pending) as
+          | 'pending'
+          | 'ready'
+          | 'failed',
+        url: posterRow?.replayPosterUrl ?? null,
+        qrUrl: posterRow?.replayQrUrl ?? null,
+        ...(posterRow?.replayFailedReason
+          ? { failedReason: posterRow.replayFailedReason }
+          : {})
+      }
     }
   }
 
@@ -412,25 +490,30 @@ export class MatchService {
   // ============ 结束 ============
 
   async endByOwner(matchId: string, ownerUserId: string, reason?: string) {
-    return this.withMatchLock(matchId, async (tx) => {
+    const result = await this.withMatchLock(matchId, async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId } })
       if (!match) throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
       if (match.ownerUserId !== ownerUserId) {
         throw new BusinessException(ErrorCode.FORBIDDEN, '只有房主能结束比赛')
       }
       if (match.state === MatchState.ended || match.state === MatchState.dissolved) {
-        return
+        return { ended: false }
       }
       await this.doEnd(tx, matchId, { userId: ownerUserId }, reason ?? 'owner')
+      return { ended: true }
     })
+    // 事务提交后异步生成战报海报（v2.22 C-1）
+    if (result?.ended) {
+      setImmediate(() => this.replayJob.generateSafe(matchId))
+    }
   }
 
   async forceEndByAdmin(matchId: string, adminId: string, reason: string) {
-    return this.withMatchLock(matchId, async (tx) => {
+    const result = await this.withMatchLock(matchId, async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId } })
       if (!match) throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, '房间不存在')
       if (match.state === MatchState.ended || match.state === MatchState.dissolved) {
-        return
+        return { ended: false }
       }
       await this.insertEvent(
         tx,
@@ -439,7 +522,11 @@ export class MatchService {
         { adminId }
       )
       await this.doEnd(tx, matchId, { adminId }, reason)
+      return { ended: true }
     })
+    if (result?.ended) {
+      setImmediate(() => this.replayJob.generateSafe(matchId))
+    }
   }
 
   async forcePauseByAdmin(matchId: string, adminId: string, reason: string) {
@@ -665,6 +752,126 @@ export class MatchService {
     })
     if (!match) return null
     return this.detailFromTx(this.prisma, match.id)
+  }
+
+  /**
+   * v2.22 战绩聚合 (`GET /v1/me/stats`)
+   *
+   * 实现：拉所有 ended 比赛 → 走 detailFromTx 拿 computed → 遍历聚合。
+   * 性能：单用户 < 1000 场前 < 100ms 内出结果；超过再考虑预聚合表。
+   */
+  async myStats(userId: string) {
+    const matches = await this.prisma.match.findMany({
+      where: {
+        OR: [{ ownerUserId: userId }, { players: { some: { userId } } }],
+        state: MatchState.ended
+      },
+      orderBy: { endedAt: 'desc' },
+      select: { id: true }
+    })
+
+    let totalMatches = 0
+    let wins = 0
+    const nineBall = {
+      matches: 0,
+      wins: 0,
+      bigJack: 0,
+      smallJack: 0,
+      golden9: 0,
+      normalWin: 0,
+      highScore: 0,
+      highScoreVs: ''
+    }
+    const eightBall = {
+      matches: 0,
+      wins: 0,
+      totalWinRounds: 0
+    }
+    const recent: Array<{
+      matchId: string
+      type: 'nine_ball' | 'eight_ball'
+      opponent: string
+      myScore: number
+      oppScore: number
+      endedAt: Date | null
+      isWin: boolean
+    }> = []
+
+    for (const m of matches) {
+      const detail = await this.detailFromTx(this.prisma, m.id)
+      const myPlayer = detail.players.find((p) => p.userId === userId && p.isCurrent)
+      if (!myPlayer) continue
+      const mySlot = myPlayer.slot
+      const isNineBall = detail.type === MatchType.nine_ball
+      const players = detail.players.filter((p) => p.isCurrent)
+
+      const myScore = isNineBall
+        ? (detail.computed as NineBallComputedState).scores?.[mySlot] ?? 0
+        : (detail.computed as EightBallComputedState).wins?.[mySlot] ?? 0
+
+      // 冠军：分数 / 胜局最高
+      const champion = players.reduce((a, b) => {
+        const sa = isNineBall
+          ? (detail.computed as NineBallComputedState).scores?.[a.slot] ?? 0
+          : (detail.computed as EightBallComputedState).wins?.[a.slot] ?? 0
+        const sb = isNineBall
+          ? (detail.computed as NineBallComputedState).scores?.[b.slot] ?? 0
+          : (detail.computed as EightBallComputedState).wins?.[b.slot] ?? 0
+        return sa >= sb ? a : b
+      }, players[0])
+      const isWin = champion?.slot === mySlot
+
+      totalMatches++
+      if (isWin) wins++
+
+      if (isNineBall) {
+        nineBall.matches++
+        if (isWin) nineBall.wins++
+        const myStatsRow = (detail.computed as NineBallComputedState).stats?.[mySlot]
+        if (myStatsRow) {
+          nineBall.bigJack += myStatsRow.bigJack || 0
+          nineBall.smallJack += myStatsRow.smallJack || 0
+          nineBall.golden9 += myStatsRow.golden9 || 0
+          nineBall.normalWin += myStatsRow.normalWin || 0
+        }
+        if (myScore > nineBall.highScore) {
+          nineBall.highScore = myScore
+          const opp = players.find((p) => p.slot !== mySlot)
+          nineBall.highScoreVs = opp?.displayName ?? ''
+        }
+      } else {
+        eightBall.matches++
+        if (isWin) eightBall.wins++
+        eightBall.totalWinRounds += myScore
+      }
+
+      if (recent.length < 5) {
+        const opp = players.find((p) => p.slot !== mySlot)
+        const oppScore = opp
+          ? isNineBall
+            ? (detail.computed as NineBallComputedState).scores?.[opp.slot] ?? 0
+            : (detail.computed as EightBallComputedState).wins?.[opp.slot] ?? 0
+          : 0
+        recent.push({
+          matchId: detail.id,
+          type: detail.type,
+          opponent: opp?.displayName ?? '',
+          myScore,
+          oppScore,
+          endedAt: detail.endedAt,
+          isWin
+        })
+      }
+    }
+
+    return {
+      totalMatches,
+      wins,
+      winRate: totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0,
+      nineBall,
+      eightBall,
+      recent
+    }
   }
 
   async listMyMatches(userId: string, page: number, pageSize: number) {

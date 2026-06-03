@@ -4,6 +4,7 @@ import { AdminAuthGuard } from '../auth/admin-auth.guard'
 import { CurrentAdmin } from '../auth/current-admin.decorator'
 import { AdminJwtPayload } from '../auth/jwt-payload'
 import { MatchService } from '../match/match.service'
+import { ReplayJobService } from '../match/replay-job.service'
 import { AuditService } from '../audit/audit.service'
 import { KickPlayerDto, ReasonDto } from './dto/admin-write.dto'
 
@@ -18,6 +19,7 @@ function getIp(req: Request): string {
 export class MatchesAdminWriteController {
   constructor(
     private readonly matchService: MatchService,
+    private readonly replayJob: ReplayJobService,
     private readonly audit: AuditService
   ) {}
 
@@ -61,6 +63,29 @@ export class MatchesAdminWriteController {
       userAgent: req.headers['user-agent'] as string
     })
     return { ok: true }
+  }
+
+  /**
+   * v2.22 战报海报：admin 手动重新生成（覆盖 24h 缓存）
+   */
+  @Post(':id/poster')
+  @HttpCode(HttpStatus.OK)
+  async regeneratePoster(
+    @Param('id') id: string,
+    @CurrentAdmin() admin: AdminJwtPayload,
+    @Req() req: Request
+  ) {
+    const r = await this.replayJob.generate(id, { force: true })
+    await this.audit.log({
+      adminId: admin.sub,
+      action: 'match.regenerate_poster',
+      targetType: 'match',
+      targetId: id,
+      detail: { posterUrl: r.posterUrl, status: r.status },
+      ip: getIp(req),
+      userAgent: req.headers['user-agent'] as string
+    })
+    return { ok: true, posterUrl: r.posterUrl, status: r.status }
   }
 
   @Post(':id/kick')
