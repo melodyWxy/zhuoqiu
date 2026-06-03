@@ -44,12 +44,16 @@ const C_CHIP_TEXT = '#dfe6e1'
 const C_BLUE = { from: '#2f6280', to: '#16303d', border: 'rgba(120,190,225,0.5)', score: '#7ec6ec', tagFg: '#8fd0ee', tagBg: 'rgba(47,98,128,0.35)' }
 const C_PURPLE = { from: '#6a4a7a', to: '#34203f', border: 'rgba(190,150,210,0.5)', score: '#c79fe0', tagFg: '#cda7e0', tagBg: 'rgba(106,74,122,0.35)' }
 
+// 无头像兜底：随机 emoji 头像池（对齐小程序 me 页 AVATAR_EMOJI_CHOICES，去掉占位 🧍）
+const FALLBACK_AVATARS = ['🦊', '🐼', '🐯', '🦁', '🐶', '🐱', '🐰', '🐻', '🥷', '🦸', '🎱']
+
 // 字体族名（ensureFonts 里注册）
 const F_CJK = 'CJK'
 const F_CJK_B = 'CJK Bold'
 const F_OSW5 = 'Oswald500'
 const F_OSW6 = 'Oswald600'
 const F_OSW7 = 'Oswald700'
+const F_EMOJI = 'Emoji'
 
 /**
  * 战报海报渲染：1080×1920 PNG buffer（B 版「动感对阵」）。
@@ -93,13 +97,16 @@ export class ReplayRendererService {
       )
     }
 
-    // 拉丁数字：仓库自带 Oswald 静态字重。dev(cwd=server) 与 prod(cwd=/app) 都覆盖
-    const oswald: Array<[string, string]> = [
+    // 仓库自带字体：Oswald 静态字重(拉丁数字) + Emoji 子集(头像兜底/用户 emoji 头像)。
+    // 不依赖系统 emoji 字体回退(skia 回退在 mac/容器行为不一致、不可靠) → 显式打包指定家族。
+    // dev(cwd=server) 与 prod(cwd=/app) 路径都覆盖。
+    const assetFonts: Array<[string, string]> = [
       ['Oswald-500.ttf', F_OSW5],
       ['Oswald-600.ttf', F_OSW6],
-      ['Oswald-700.ttf', F_OSW7]
+      ['Oswald-700.ttf', F_OSW7],
+      ['Emoji.ttf', F_EMOJI]
     ]
-    for (const [file, fam] of oswald) {
+    for (const [file, fam] of assetFonts) {
       const candidates = [
         join(process.cwd(), 'assets/fonts', file),
         join(__dirname, '../../assets/fonts', file)
@@ -109,10 +116,10 @@ export class ReplayRendererService {
         try {
           GlobalFonts.registerFromPath(found, fam)
         } catch (e) {
-          this.logger.warn(`register oswald failed: ${found} ${(e as Error).message}`)
+          this.logger.warn(`register font failed: ${found} ${(e as Error).message}`)
         }
       } else {
-        this.logger.warn(`oswald font missing: ${file} (looked in ${candidates.join(', ')})`)
+        this.logger.warn(`asset font missing: ${file} (looked in ${candidates.join(', ')})`)
       }
     }
 
@@ -125,8 +132,10 @@ export class ReplayRendererService {
     const canvas = createCanvas(W, H)
     const ctx = canvas.getContext('2d')
 
-    const players = [...input.players].sort(
-      (a, b) => (input.scores[b.slot] ?? 0) - (input.scores[a.slot] ?? 0)
+    const players = this.fillFallbackAvatars(
+      [...input.players].sort(
+        (a, b) => (input.scores[b.slot] ?? 0) - (input.scores[a.slot] ?? 0)
+      )
     )
     const isDuel = players.length === 2
 
@@ -855,7 +864,9 @@ export class ReplayRendererService {
   private drawInitial(ctx: SKRSContext2D, text: string, size: number, isEmoji = false) {
     const ch = isEmoji ? text : (text?.[0] ?? '🎱')
     ctx.fillStyle = C_WHITE
-    ctx.font = `${Math.floor(size * (isEmoji ? 0.55 : 0.5))}px ${F_CJK_B}`
+    const px = Math.floor(size * (isEmoji ? 0.55 : 0.5))
+    // emoji 显式用打包的 Emoji 家族（单色，白色剪影）；名字首字用 CJK
+    ctx.font = isEmoji ? `${px}px "${F_EMOJI}"` : `${px}px ${F_CJK_B}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(ch, 0, 0)
@@ -952,6 +963,37 @@ export class ReplayRendererService {
       else hi = mid - 1
     }
     return arr.slice(0, Math.max(0, lo)).join('') + '…'
+  }
+
+  /**
+   * 给没有头像的玩家分配一个 emoji 兜底头像。
+   * - 用「名字#slot」做种子 → 同一个人每次生成都拿到同一个（稳定，不乱跳）
+   * - 同一局内线性探测避开已用 emoji（含别人选过的 emoji 头像）→ 不撞脸
+   */
+  private fillFallbackAvatars(players: PlayerLite[]): PlayerLite[] {
+    const taken = new Set(
+      players
+        .map((p) => p.avatar)
+        .filter((a): a is string => !!a && !a.startsWith('http'))
+    )
+    return players.map((p) => {
+      if (p.avatar) return p
+      const start = this.hashKey(`${p.displayName}#${p.slot}`) % FALLBACK_AVATARS.length
+      for (let i = 0; i < FALLBACK_AVATARS.length; i++) {
+        const cand = FALLBACK_AVATARS[(start + i) % FALLBACK_AVATARS.length]
+        if (!taken.has(cand)) {
+          taken.add(cand)
+          return { ...p, avatar: cand }
+        }
+      }
+      return { ...p, avatar: FALLBACK_AVATARS[start] }
+    })
+  }
+
+  private hashKey(s: string): number {
+    let h = 0
+    for (const ch of s) h = (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0
+    return h
   }
 
   private roundRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: number, r: number) {
