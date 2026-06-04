@@ -376,11 +376,11 @@ export class ReplayRendererService {
     // 三列：亚(左) / 冠(中) / 季(右)
     const cols = [
       { p: players[1], score: input.scores[players[1].slot] ?? 0, cx: 245, pedW: 270, pedH: 200,
-        avSize: 175, scoreFs: 84, nameFs: 40, labelFs: 90, medal: SILVER, label: '亚', champ: false },
+        avSize: 175, scoreFs: 84, nameFs: 40, labelFs: 96, medal: SILVER, label: '2', champ: false },
       { p: players[2], score: input.scores[players[2].slot] ?? 0, cx: 835, pedW: 270, pedH: 150,
-        avSize: 175, scoreFs: 84, nameFs: 40, labelFs: 90, medal: BRONZE, label: '季', champ: false },
+        avSize: 175, scoreFs: 84, nameFs: 40, labelFs: 96, medal: BRONZE, label: '3', champ: false },
       { p: players[0], score: input.scores[players[0].slot] ?? 0, cx: CX, pedW: 300, pedH: 300,
-        avSize: 240, scoreFs: 120, nameFs: 50, labelFs: 120, medal: GOLD, label: '冠', champ: true }
+        avSize: 240, scoreFs: 120, nameFs: 50, labelFs: 128, medal: GOLD, label: '1', champ: true }
     ]
     for (const c of cols) {
       await this.drawPodiumColumn(ctx, c, PED_BOTTOM)
@@ -415,12 +415,13 @@ export class ReplayRendererService {
     ctx.beginPath()
     ctx.ellipse(c.cx, pedTop, c.pedW / 2, 14, 0, 0, Math.PI * 2)
     ctx.fill()
-    // 冠/亚/季
+    // 名次数字 1/2/3（用 Oswald，和大比分同字体，容器里一定渲染得出；
+    // 之前用中文「冠/亚/季」在生产 CJK 字体下渲染为空白）
     ctx.fillStyle = c.medal.main
-    ctx.font = `${c.labelFs}px ${F_CJK_B}`
+    ctx.font = `${c.labelFs}px ${F_OSW7}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
-    ctx.fillText(c.label, c.cx, pedTop + (c.champ ? 44 : 34))
+    ctx.fillText(c.label, c.cx, pedTop + (c.champ ? 40 : 30))
 
     // 分数（台座上方）
     const scoreBottom = pedTop - 18
