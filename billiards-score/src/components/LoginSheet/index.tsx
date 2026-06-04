@@ -226,7 +226,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
       setStep('wechat_loading')
       handleWechat().catch(() => {
         // 错误已在 handleWechat 内 toast 不到的话这里兜底
-        Taro.showToast({ title: '微信登录失败，请重试', icon: 'none' })
+        Taro.showToast({ title: '登录失败，请重试', icon: 'none' })
       })
     } else {
       setStep('menu')
@@ -250,7 +250,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
         // 直登
         await handleWechat()
       } catch {
-        Taro.showToast({ title: '微信登录失败，请重试', icon: 'none' })
+        Taro.showToast({ title: '登录失败，请重试', icon: 'none' })
       } finally {
         setLoading(false)
       }
@@ -304,7 +304,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
           <>
             <Text className='login-sheet-title'>用户服务协议与隐私政策</Text>
             <Text className='login-sheet-hint'>
-              为了向你提供登录、联机比赛、赛事报名等服务，我们需要在你授权后收集手机号或微信账号信息。请阅读并同意下列协议后继续：
+              为了向你提供登录、联机比赛、赛事报名等服务，我们需要在你授权后收集手机号或账号信息。请阅读并同意下列协议后继续：
             </Text>
             <View className='legal-links'>
               <Text className='legal-link' onClick={() => openLegal('terms')}>《用户服务协议》</Text>
@@ -325,7 +325,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
 
         {step === 'wechat_loading' && (
           <>
-            <Text className='login-sheet-title'>正在通过微信登录…</Text>
+            <Text className='login-sheet-title'>正在登录…</Text>
             <Text className='login-sheet-hint'>请在系统弹窗中确认授权</Text>
           </>
         )}
@@ -334,7 +334,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
           <>
             <Text className='login-sheet-title'>授权手机号以完成登录</Text>
             <Text className='login-sheet-hint'>
-              我们仅在你授权后获取已绑定微信的手机号，用于赛事报名识别与客服对账。
+              我们仅在你授权后获取你的手机号，用于赛事报名识别与客服对账。
             </Text>
             <Button
               className={`login-sheet-btn primary ${loading ? 'is-loading' : ''}`}
@@ -342,7 +342,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
               onGetPhoneNumber={handleGetPhoneNumber}
               disabled={loading}
             >
-              {loading ? '正在绑定…' : '📱 微信授权手机号'}
+              {loading ? '正在绑定…' : '📱 手机号快捷登录'}
             </Button>
             <View className='login-sheet-btn cancel' onClick={handleSkipPhone}>
               稍后绑定
@@ -354,7 +354,7 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
           <>
             <Text className='login-sheet-title'>设置头像和昵称</Text>
             <Text className='login-sheet-hint'>
-              为了在比赛中区分参赛玩家，请设置头像和昵称。点击下方按钮可使用你的微信资料。
+              为了在比赛中区分参赛玩家，请设置头像和昵称。
             </Text>
             <View className='profile-row'>
               <Button
@@ -368,13 +368,13 @@ export default function LoginSheet({ visible, onClose, onSuccess, redirectToActi
                   <Text className='profile-avatar-placeholder'>👤</Text>
                 )}
               </Button>
-              <Text className='profile-avatar-hint'>点击选择微信头像</Text>
+              <Text className='profile-avatar-hint'>点击选择头像</Text>
             </View>
             <Input
               className='login-sheet-field'
               type='nickname'
               value={profileNickname}
-              placeholder='点击使用微信昵称'
+              placeholder='点击输入昵称'
               maxlength={32}
               onInput={(e) => setProfileNickname(e.detail.value)}
             />

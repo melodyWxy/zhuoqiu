@@ -152,7 +152,7 @@ export default function BindPhoneSheet({ visible, onClose, onSuccess }: Props) {
           <>
             <Text className='login-sheet-title'>绑定手机号</Text>
             <Text className='login-sheet-hint'>
-              点击下方按钮，授权使用与微信绑定的手机号；如想绑别的号，可点「使用其他手机号」。
+              点击下方按钮，使用本机号码快捷绑定；如想绑别的号，可点「使用其他手机号」。
             </Text>
             <Button
               className={`login-sheet-btn primary ${loading ? 'is-loading' : ''}`}
@@ -160,7 +160,7 @@ export default function BindPhoneSheet({ visible, onClose, onSuccess }: Props) {
               onGetPhoneNumber={handleWechatGetPhoneNumber}
               disabled={loading}
             >
-              {loading ? '正在绑定…' : '📱 微信授权手机号'}
+              {loading ? '正在绑定…' : '📱 获取手机号'}
             </Button>
             <View className='login-sheet-btn' onClick={() => setStep('input_phone')}>
               使用其他手机号
@@ -213,7 +213,7 @@ export default function BindPhoneSheet({ visible, onClose, onSuccess }: Props) {
           <>
             <Text className='login-sheet-title'>手机号已被占用</Text>
             <Text className='login-sheet-hint'>
-              {phone} 已属另一个账号。合并后该账号的战绩和微信/抖音绑定会并入当前账号。
+              {phone} 已属另一个账号。合并后该账号的战绩和账号绑定会并入当前账号。
             </Text>
             <View className='login-sheet-btn primary' onClick={handleConfirmMerge}>
               确认合并
