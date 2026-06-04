@@ -53,6 +53,10 @@ services:
       OSS_BUCKET: ${OSS_BUCKET:-}
       OSS_ENDPOINT: ${OSS_ENDPOINT:-}
       OSS_ROLE_ARN: ${OSS_ROLE_ARN:-}
+      # 腾讯位置服务（省市区行政区划树，发现球房 / 球房入驻地区筛选用）
+      # 值放生产根目录 .env；TENCENT_MAP_SK 仅在该 key 开了 SN 签名校验时才填
+      TENCENT_MAP_KEY: ${TENCENT_MAP_KEY:-}
+      TENCENT_MAP_SK: ${TENCENT_MAP_SK:-}
     volumes:
       - uploads:/app/uploads
     # 默认不对外暴露：流量统一走 caddy → docker network。
