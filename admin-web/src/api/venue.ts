@@ -202,9 +202,12 @@ export interface BracketPlayerRef {
   userId: string
 }
 
+export type BracketGroup = 'winners' | 'losers' | 'grand_final'
+
 export interface BracketMatchItem {
   id: string
   tournamentId: string
+  bracketGroup: BracketGroup
   round: number
   slotInRound: number
   playerARegistrationId: string | null
@@ -218,14 +221,22 @@ export interface BracketMatchItem {
   scheduledAt: string | null
 }
 
+interface BracketRoundGroup {
+  round: number
+  matches: BracketMatchItem[]
+}
+
 export interface BracketTree {
   tournamentId: string
   status: string
+  format?: TournamentFormat
   totalRounds: number
-  rounds: Array<{
-    round: number
-    matches: BracketMatchItem[]
-  }>
+  /** 向后兼容 = 胜者组（单败时即全部对阵） */
+  rounds: BracketRoundGroup[]
+  /** 双败：胜者组 / 败者组 / 总决赛（含决胜局）。单败时 losers/grandFinal 为空 */
+  winners?: BracketRoundGroup[]
+  losers?: BracketRoundGroup[]
+  grandFinal?: BracketMatchItem[]
 }
 
 export const tournamentMerchantApi = {

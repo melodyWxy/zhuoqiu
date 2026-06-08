@@ -15,7 +15,8 @@ import {
   TournamentListQueryDto,
   UpdateTournamentDto
 } from './dto/tournament.dto'
-import { planBracket } from './bracket-utils'
+import { planBracket, planDoubleElim } from './bracket-utils'
+import { advanceFromCompletedMatch } from './bracket-advance'
 
 @Injectable()
 export class TournamentService {
@@ -184,10 +185,10 @@ export class TournamentService {
           '当前状态不能开赛'
         )
       }
-      if (t.format !== 'single_elim') {
+      if (t.format !== 'single_elim' && t.format !== 'double_elim') {
         throw new BusinessException(
           ErrorCode.BAD_REQUEST,
-          '仅单败淘汰支持开赛（其他赛制 v2.11+）'
+          '仅单败 / 双败淘汰支持开赛（循环赛 / 瑞士轮 v2.11+）'
         )
       }
 
@@ -220,6 +221,16 @@ export class TournamentService {
       const seedToReg = new Map<number, TournamentRegistration>()
       regs.forEach((r, i) => seedToReg.set(i + 1, r))
 
+      // 双败：用显式指针物化整图，单独走 genDoubleElimBracket
+      if (t.format === 'double_elim') {
+        await this.genDoubleElimBracket(tx, t.id, regs)
+        return tx.tournament.update({
+          where: { id },
+          data: { status: TournamentStatus.in_progress }
+        })
+      }
+
+      // ---- 以下单败淘汰（原逻辑，无指针，推进走 legacy floor）----
       const plan = planBracket(regs.length)
 
       // 生成所有 round 的 pending bracket
@@ -341,6 +352,79 @@ export class TournamentService {
     })
   }
 
+  /**
+   * 双败：把 planDoubleElim 计划物化成 bracket（含显式 winnerTo/loserTo 指针），
+   * 再用统一推进处理 WB 首轮 BYE 的自动晋级 + 败者下沉。
+   */
+  private async genDoubleElimBracket(
+    tx: Prisma.TransactionClient,
+    tournamentId: string,
+    regs: TournamentRegistration[]
+  ) {
+    const plan = planDoubleElim(regs.length)
+    const seedToReg = new Map<number, TournamentRegistration>()
+    regs.forEach((r, i) => seedToReg.set(i + 1, r))
+    // 先给每个计划节点分配稳定的 bm id，便于把 key 指针翻译成真实 id
+    const idByKey = new Map<string, string>()
+    for (const nd of plan.nodes) idByKey.set(nd.key, genId('bm'))
+
+    for (const nd of plan.nodes) {
+      const id = idByKey.get(nd.key)!
+      const isWbFirst = nd.group === 'winners' && nd.round === 1
+      let playerARegistrationId: string | null = null
+      let playerBRegistrationId: string | null = null
+      let slotASettled = false
+      let slotBSettled = false
+      let status: BracketMatchStatus = BracketMatchStatus.pending
+      let winnerRegistrationId: string | null = null
+
+      if (isWbFirst) {
+        const regA = nd.seedA != null ? seedToReg.get(nd.seedA) ?? null : null
+        const regB = nd.seedB != null ? seedToReg.get(nd.seedB) ?? null : null
+        playerARegistrationId = regA?.id ?? null
+        playerBRegistrationId = regB?.id ?? null
+        slotASettled = true
+        slotBSettled = true
+        if (regA && regB) {
+          status = BracketMatchStatus.ready
+        } else {
+          status = BracketMatchStatus.walkover
+          winnerRegistrationId = regA?.id ?? regB?.id ?? null
+        }
+      }
+
+      await tx.tournamentBracketMatch.create({
+        data: {
+          id,
+          tournamentId,
+          bracketGroup: nd.group,
+          round: nd.round,
+          slotInRound: nd.slot,
+          playerARegistrationId,
+          playerBRegistrationId,
+          winnerRegistrationId,
+          status,
+          winnerToMatchId: nd.winnerToKey ? idByKey.get(nd.winnerToKey)! : null,
+          winnerToSlot: nd.winnerToSlot ?? null,
+          loserToMatchId: nd.loserToKey ? idByKey.get(nd.loserToKey)! : null,
+          loserToSlot: nd.loserToSlot ?? null,
+          slotASettled,
+          slotBSettled
+        }
+      })
+    }
+
+    // WB 首轮 BYE → 沿指针自动晋级（winner 进 WB R2，loser=null 下沉 LB）
+    for (const nd of plan.nodes) {
+      if (nd.group !== 'winners' || nd.round !== 1) continue
+      const id = idByKey.get(nd.key)!
+      const row = await tx.tournamentBracketMatch.findUnique({ where: { id } })
+      if (row?.status === BracketMatchStatus.walkover) {
+        await advanceFromCompletedMatch(tx, id)
+      }
+    }
+  }
+
   // ============ bracket 查询 ============
 
   async getBracket(tournamentId: string) {
@@ -382,21 +466,41 @@ export class TournamentService {
       playerB: withNick(it.playerB),
       winner: withNick(it.winner)
     }))
-    // 分组为 round → slots
-    const rounds: Record<number, typeof items> = {}
-    for (const it of items) {
-      if (!rounds[it.round]) rounds[it.round] = []
-      rounds[it.round].push(it)
+    // 过滤未激活的决胜局空壳（grand_final round2 且还没人填进来）
+    const visible = items.filter(
+      (it) =>
+        !(
+          it.bracketGroup === 'grand_final' &&
+          it.round === 2 &&
+          it.status === BracketMatchStatus.pending &&
+          !it.slotASettled
+        )
+    )
+    // 按 group 分 round → slots
+    const groupRounds = (grp: string) => {
+      const map: Record<number, typeof items> = {}
+      for (const it of visible.filter((x) => x.bracketGroup === grp)) {
+        if (!map[it.round]) map[it.round] = []
+        map[it.round].push(it)
+      }
+      return Object.keys(map)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map((r) => ({ round: r, matches: map[r] }))
     }
-    const roundList = Object.keys(rounds)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map((r) => ({ round: r, matches: rounds[r] }))
+    const winners = groupRounds('winners')
+    const losers = groupRounds('losers')
+    const grandFinal = visible.filter((x) => x.bracketGroup === 'grand_final')
     return {
       tournamentId,
       status: t.status,
-      rounds: roundList,
-      totalRounds: roundList.length
+      format: t.format,
+      // 向后兼容：rounds = 胜者组（单败时即全部对阵）
+      rounds: winners,
+      totalRounds: winners.length,
+      winners,
+      losers,
+      grandFinal
     }
   }
 

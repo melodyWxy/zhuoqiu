@@ -184,7 +184,7 @@ export default function TournamentForm() {
               <Select
                 options={[
                   { value: 'single_elim', label: '单败淘汰' },
-                  { value: 'double_elim', label: '双败（v2.11）', disabled: true },
+                  { value: 'double_elim', label: '双败淘汰' },
                   { value: 'round_robin', label: '循环赛（v2.11）', disabled: true },
                   { value: 'swiss', label: '瑞士轮（v2.11）', disabled: true }
                 ]}

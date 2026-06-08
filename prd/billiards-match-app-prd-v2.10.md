@@ -308,9 +308,27 @@ venue_application:
   ```
 - 一次性生成全部空 bracket，随比赛推进回填 winner
 
+#### 赛制：双败淘汰（Double Elimination）— 2026-06 落地
+
+- **规则**：输一场进败者组（LB），LB 再输一场才真正淘汰；胜者组（WB）冠军一路未负。
+- **总决赛（含决胜局 / bracket reset）**：WB 冠军 vs LB 冠军。
+  - WB 冠军赢 → 直接夺冠（赛事 completed）。
+  - LB 冠军赢 → 因 WB 冠军此前未负，需再打一场「决胜局」决出总冠军（总决赛最多 2 场）。
+- **人数**：任意人数，非 2^k 用 BYE 补齐（同单败）；双败至少 3 人（k≥2）。
+- **败者下沉**：WB R1 败者进 LB 首轮（前半进 A、后半逆序进 B，cross 防过早重赛）；
+  WB 第 r 轮（r≥2）败者进 LB major round 2(r-1) 的 A 侧（r 偶逆序 / r 奇正序）；
+  WB 决赛败者落入 LB 决赛。LB 共 2(k-1) 轮，minor（内部对打减半）/ major（迎接下沉者）交替。
+- **名次**：LB 决赛负者 = 季军（无需单独季军赛）。
+
+**实现要点**（与单败的差异，见 changelog / `bracket-utils.ts planDoubleElim`）：
+- bracket 表新增 `bracketGroup`(winners/losers/grand_final) + 显式 next-match 指针
+  `winnerToMatchId/Slot`、`loserToMatchId/Slot` + `slotASettled/slotBSettled`，
+  唯一约束扩成 `(tournamentId, bracketGroup, round, slotInRound)`。
+- 推进统一为「跟指针」：winner→winnerTo、loser→loserTo（空=真淘汰），BYE 自动连锁晋级；
+  决胜局空壳预生成、推进期条件激活。单败也改走指针（存量进行中赛事指针为空时回退旧 floor 算法）。
+
 #### 其他赛制（v2.11+）
 
-- double_elim：败者组
 - round_robin：所有人两两对打，按胜场 + 净分排名
 - swiss：每轮按积分分组配对，轮数固定
 - 数据模型上 `format` 字段已预留；bracket 表 round/slot_in_round 对循环赛不够用，到时再加 `round_robin_matches` 表或给 bracket 加 group_id。
@@ -334,7 +352,7 @@ venue_application:
 - ❌ **赛事直播/视频**
 - ❌ **附近球房（LBS）**：lat/lng 保留字段，本期不给"按距离排序"
 - ❌ **店员系统完整版**：只 owner 一人，UI 留占位
-- ❌ **循环赛/瑞士轮/双败**：format 字段保留，逻辑放 v2.11+
+- ❌ **循环赛/瑞士轮**：format 字段保留，逻辑放 v2.11+（双败已于 2026-06 落地，见 4.2）
 
 ---
 
