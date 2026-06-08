@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { BusinessException, ErrorCode } from '../common/exceptions/business.exception'
 import { genId, genMatchCode } from '../common/utils/id'
 import { resolveAfterMatchEnd } from './bracket-resolve'
+import { advanceFromCompletedMatch } from './bracket-advance'
 import { DEFAULT_NINE_BALL_RULES } from '../match/state-machine/types'
 
 /**
@@ -214,6 +215,16 @@ export class BracketService {
           `${winnerSide} 方未就位，无法判胜`
         )
       }
+      // 对手必须已产生：只有一方时说明对手还在上一轮没打完，
+      // 不能把"未产生的对手"当成轮空判这方胜（轮空应由系统在生成/推进时自动处理）。
+      const opponentRegId =
+        winnerSide === 'A' ? bm.playerBRegistrationId : bm.playerARegistrationId
+      if (!opponentRegId) {
+        throw new BusinessException(
+          ErrorCode.TOURNAMENT_STATE_INVALID,
+          '对手尚未产生（上一轮还没打完），暂不能判负 / 轮空'
+        )
+      }
       await tx.tournamentBracketMatch.update({
         where: { id: bm.id },
         data: {
@@ -221,10 +232,8 @@ export class BracketService {
           winnerRegistrationId: winnerRegId
         }
       })
-      // 推进下一轮（复用 resolve 逻辑里的"将 winner 填进下一轮对应 slot"）
-      await this.advanceWinnerToNextRound(tx, bm.id, winnerRegId)
-      // 如果是决赛 → 赛事结束
-      await this.maybeCompleteTournament(tx, tournamentId)
+      // 统一推进（跟指针；存量单败回退 floor）
+      await advanceFromCompletedMatch(tx, bm.id)
       return { ok: true }
     })
   }
@@ -233,101 +242,7 @@ export class BracketService {
    * Match.end 时调用：根据该 match 关联的 bracket 推进。
    * MatchService.doEnd 末尾会 await 它。
    */
-  async resolveAfterMatchEnd(
-    tx: Prisma.TransactionClient,
-    matchId: string
-  ) {
-    return resolveAfterMatchEnd(tx, matchId, {
-      maybeCompleteTournament: (t, tid) => this.maybeCompleteTournament(t, tid),
-      advanceWinnerToNextRound: (t, bid, rid) =>
-        this.advanceWinnerToNextRound(t, bid, rid)
-    })
+  async resolveAfterMatchEnd(tx: Prisma.TransactionClient, matchId: string) {
+    return resolveAfterMatchEnd(tx, matchId)
   }
-
-  /**
-   * 把 winner 填到下一轮对应位置；若下一轮双方齐了，状态置 ready。
-   */
-  async advanceWinnerToNextRound(
-    tx: Prisma.TransactionClient,
-    bracketMatchId: string,
-    winnerRegId: string
-  ) {
-    const bm = await tx.tournamentBracketMatch.findUnique({
-      where: { id: bracketMatchId }
-    })
-    if (!bm) return
-    const next = await tx.tournamentBracketMatch.findFirst({
-      where: {
-        tournamentId: bm.tournamentId,
-        round: bm.round + 1,
-        slotInRound: Math.floor(bm.slotInRound / 2)
-      }
-    })
-    if (!next) return // 已是决赛
-    const side = bm.slotInRound % 2 === 0 ? 'A' : 'B'
-    await tx.tournamentBracketMatch.update({
-      where: { id: next.id },
-      data:
-        side === 'A'
-          ? { playerA: { connect: { id: winnerRegId } } }
-          : { playerB: { connect: { id: winnerRegId } } }
-    })
-    const refreshed = await tx.tournamentBracketMatch.findUnique({
-      where: { id: next.id }
-    })
-    if (
-      refreshed?.playerARegistrationId &&
-      refreshed?.playerBRegistrationId &&
-      refreshed.status === BracketMatchStatus.pending
-    ) {
-      await tx.tournamentBracketMatch.update({
-        where: { id: next.id },
-        data: { status: BracketMatchStatus.ready }
-      })
-    }
-  }
-
-  /**
-   * 若决赛已 completed，置赛事为 completed。
-   */
-  async maybeCompleteTournament(
-    tx: Prisma.TransactionClient,
-    tournamentId: string
-  ) {
-    const finals = await tx.tournamentBracketMatch.findMany({
-      where: { tournamentId },
-      orderBy: { round: 'desc' },
-      take: 1
-    })
-    const lastRound = finals[0]?.round
-    if (!lastRound) return
-    const finalRound = await tx.tournamentBracketMatch.findMany({
-      where: { tournamentId, round: lastRound }
-    })
-    const allDone = finalRound.every(
-      (f) =>
-        f.status === BracketMatchStatus.completed ||
-        f.status === BracketMatchStatus.walkover
-    )
-    if (allDone && finalRound.length > 0) {
-      const t = await tx.tournament.findUnique({ where: { id: tournamentId } })
-      if (t && t.status === TournamentStatus.in_progress) {
-        await tx.tournament.update({
-          where: { id: tournamentId },
-          data: { status: TournamentStatus.completed }
-        })
-      }
-    }
-  }
-}
-
-// 静态便捷接口：方便其他模块（如 MatchModule）通过 forwardRef 调用
-// 也可以走 DI 注入 BracketService.resolveAfterMatchEnd(tx, matchId)
-export type BracketServiceCallbacks = {
-  maybeCompleteTournament: (tx: Prisma.TransactionClient, tid: string) => Promise<void>
-  advanceWinnerToNextRound: (
-    tx: Prisma.TransactionClient,
-    bid: string,
-    rid: string
-  ) => Promise<void>
 }

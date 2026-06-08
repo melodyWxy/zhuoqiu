@@ -12,27 +12,19 @@ import type {
   NineBallRules,
   PlayerSlotState
 } from '../match/state-machine/types'
-
-export interface BracketResolveCallbacks {
-  maybeCompleteTournament: (tx: Prisma.TransactionClient, tid: string) => Promise<void>
-  advanceWinnerToNextRound: (
-    tx: Prisma.TransactionClient,
-    bid: string,
-    rid: string
-  ) => Promise<void>
-}
+import { advanceFromCompletedMatch } from './bracket-advance'
 
 /**
  * Match 结束后的 bracket 推进：
  *   1. 找 match.tournamentBracketMatch（通过 matchId 反查 bracket）
  *   2. 复用 state-machine 算分：slot 1 / slot 2 谁高谁赢
  *   3. 写 bracket.winnerRegistrationId + status=completed
- *   4. 推进下一轮 playerA/B + 若决赛完成则赛事 completed
+ *   4. 调统一推进 advanceFromCompletedMatch（跟指针：winner/loser 进下一场，
+ *      处理 BYE 连锁、双败总决赛/决胜局、单败完赛；存量单败回退 floor）
  */
 export async function resolveAfterMatchEnd(
   tx: Prisma.TransactionClient,
-  matchId: string,
-  cb: BracketResolveCallbacks
+  matchId: string
 ): Promise<void> {
   const match = await tx.match.findUnique({
     where: { id: matchId },
@@ -94,6 +86,5 @@ export async function resolveAfterMatchEnd(
       winnerRegistrationId: winnerRegId
     }
   })
-  await cb.advanceWinnerToNextRound(tx, bm.id, winnerRegId)
-  await cb.maybeCompleteTournament(tx, bm.tournamentId)
+  await advanceFromCompletedMatch(tx, bm.id)
 }

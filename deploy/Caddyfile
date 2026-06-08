@@ -34,9 +34,12 @@ billiards-admin.macrobit.com.cn {
 billiards-server.macrobit.com.cn {
     encode zstd gzip
 
-    # WS 走的是 ws path；caddy 自动透传 Upgrade/Connection 头，不用单独 location
+    # WS 走的是 ws path；caddy 自动透传 Upgrade/Connection 头并 hijack 成裸流，
+    # 对已升级的 WS 不套用 HTTP idle 超时，所以这里无需为 WS 做特殊保活。
     reverse_proxy server:3009 {
-        # 长连接：WebSocket 心跳间隔 30s，留足余量
+        # 注意：transport.keepalive 管的是 caddy↔server(上游)的 HTTP 连接池复用，
+        # 与"客户端↔caddy 的 WS 存活"无关。WS 存活靠应用层心跳：
+        # 客户端 15s 心跳 + 看门狗，服务端 25s 主动 ping 回收死连接。
         transport http {
             keepalive 5m
             keepalive_idle_conns 50

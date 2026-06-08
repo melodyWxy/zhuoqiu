@@ -423,9 +423,13 @@ function BracketActionModal({
 
   const canStart = m.status === 'ready'
   const isInProgress = m.status === 'in_progress' && m.matchId
+  // 判负/轮空必须双方都已产生：只有一方时说明对手还在上一轮没打完，
+  // 不能把"未产生的对手"当成轮空判这方胜。
+  const bothPlayersPresent =
+    !!m.playerARegistrationId && !!m.playerBRegistrationId
   const canWalkover =
     (m.status === 'ready' || m.status === 'pending') &&
-    (m.playerARegistrationId || m.playerBRegistrationId) &&
+    bothPlayersPresent &&
     !m.matchId
 
   const theme = BM_CARD_THEME[m.status] ?? BM_CARD_THEME.pending
@@ -522,11 +526,40 @@ const BM_STATUS: Record<string, { text: string; color: string }> = {
   walkover: { text: '轮空', color: 'warning' }
 }
 
-function ROUND_NAME(round: number, total: number): string {
+function singleRoundName(round: number, total: number): string {
   if (round === total) return '决赛'
   if (round === total - 1) return '半决赛'
   if (round === total - 2) return '四分之一决赛'
   return `第 ${round} 轮`
+}
+
+/** 一组轮次的横向列渲染（胜者组 / 败者组 / 单败共用） */
+function RoundColumns({
+  rounds,
+  nameOf,
+  onSelect
+}: {
+  rounds: Array<{ round: number; matches: BracketMatchItem[] }>
+  nameOf: (round: number) => string
+  onSelect: (m: BracketMatchItem) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      {rounds.map(({ round, matches }) => (
+        <div
+          key={round}
+          style={{ minWidth: 220, display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <div style={{ fontWeight: 600, color: '#d4af37' }}>
+            {nameOf(round)}（{matches.length}）
+          </div>
+          {matches.map((m) => (
+            <BracketMatchCard key={m.id} m={m} onSelect={onSelect} />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function BracketView({
@@ -570,45 +603,84 @@ function BracketView({
     return <Card loading={loading} />
   }
 
-  const roundMap = bracket.rounds.reduce<Record<number, BracketMatchItem[]>>(
-    (acc, r) => ({ ...acc, [r.round]: r.matches }),
-    {}
-  )
-  const total = bracket.totalRounds
+  const isDouble =
+    bracket.format === 'double_elim' ||
+    (bracket.losers?.length ?? 0) > 0 ||
+    (bracket.grandFinal?.length ?? 0) > 0
 
+  // ---- 单败：单段横向轮次 ----
+  if (!isDouble) {
+    const total = bracket.totalRounds
+    return (
+      <Card
+        bodyStyle={{ padding: 16, overflowX: 'auto' }}
+        title={
+          <Space>
+            <span>赛程树</span>
+            <Tag>{bracket.rounds[0]?.matches.length ?? 0} 首轮 / {total} 轮</Tag>
+            <Tag color="default">点对阵卡 → 开始比赛 / 判负</Tag>
+          </Space>
+        }
+      >
+        <RoundColumns
+          rounds={bracket.rounds}
+          nameOf={(r) => singleRoundName(r, total)}
+          onSelect={onSelect}
+        />
+      </Card>
+    )
+  }
+
+  // ---- 双败：胜者组 / 败者组 / 总决赛 三段 ----
+  const winners = bracket.winners ?? bracket.rounds
+  const losers = bracket.losers ?? []
+  const grandFinal = bracket.grandFinal ?? []
+  const wbTotal = winners.length
+  const lbTotal = losers.length
+  const sectionTitle = (t: string) => (
+    <div style={{ fontWeight: 700, fontSize: 15, color: '#262626', margin: '4px 0 10px' }}>
+      {t}
+    </div>
+  )
   return (
     <Card
       bodyStyle={{ padding: 16, overflowX: 'auto' }}
       title={
-        <Space>
-          <span>赛程树</span>
-          <Tag>{bracket.rounds[0]?.matches.length ?? 0} 首轮 / {total} 轮</Tag>
-          <Tag color="default">点对阵卡 → 开始比赛 / 判负</Tag>
+        <Space wrap>
+          <span>赛程树 · 双败淘汰</span>
+          <Tag color="gold">胜者组 {wbTotal} 轮</Tag>
+          <Tag color="purple">败者组 {lbTotal} 轮</Tag>
+          <Tag color="default">点对阵卡 → 开始 / 判负</Tag>
         </Space>
       }
     >
+      {sectionTitle('🏆 胜者组')}
+      <RoundColumns
+        rounds={winners}
+        nameOf={(r) => (r === wbTotal ? '胜者组决赛' : `胜者组 R${r}`)}
+        onSelect={onSelect}
+      />
+      <div style={{ height: 20 }} />
+      {sectionTitle('🥈 败者组')}
+      <RoundColumns
+        rounds={losers}
+        nameOf={(r) => (r === lbTotal ? '败者组决赛' : `败者组 R${r}`)}
+        onSelect={onSelect}
+      />
+      <div style={{ height: 20 }} />
+      {sectionTitle('👑 总决赛')}
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        {Array.from({ length: total }, (_, i) => i + 1).map((round) => {
-          const items = roundMap[round] ?? []
-          return (
-            <div
-              key={round}
-              style={{
-                minWidth: 220,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12
-              }}
-            >
-              <div style={{ fontWeight: 600, color: '#d4af37' }}>
-                {ROUND_NAME(round, total)}（{items.length}）
-              </div>
-              {items.map((m) => (
-                <BracketMatchCard key={m.id} m={m} onSelect={onSelect} />
-              ))}
+        {grandFinal.map((m) => (
+          <div
+            key={m.id}
+            style={{ minWidth: 220, display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
+            <div style={{ fontWeight: 600, color: '#d4af37' }}>
+              {m.round >= 2 ? '决胜局（reset）' : '总决赛'}
             </div>
-          )
-        })}
+            <BracketMatchCard m={m} onSelect={onSelect} />
+          </div>
+        ))}
       </div>
     </Card>
   )
@@ -700,12 +772,13 @@ function BracketMatchCard({
       {isWinner ? <span style={{ color: '#389e0d' }}>✓</span> : null}
     </div>
   )
+  // pending 不可点：要么双方未齐（在等上一轮），要么是未激活的决胜局空壳。
+  // 只有对手已产生（ready / in_progress / completed）才可操作，避免把"还没产生的对手"
+  // 误判成轮空。
   const clickable =
     m.status === 'ready' ||
     m.status === 'in_progress' ||
-    m.status === 'completed' ||
-    (m.status === 'pending' &&
-      (m.playerARegistrationId || m.playerBRegistrationId))
+    m.status === 'completed'
   return (
     <div
       onClick={() => clickable && onSelect(m)}

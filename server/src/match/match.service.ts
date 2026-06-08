@@ -590,69 +590,9 @@ export class MatchService {
       { type: 'end', endedBy: actor.userId ?? actor.adminId ?? 'unknown', reason },
       actor
     )
-    // v2.10 P5：赛事 match 结束 → 回填 bracket + 推进下一轮
+    // v2.10 P5 / v2.22 双败：赛事 match 结束 → 回填 bracket + 统一推进（跟指针）
     try {
-      await resolveAfterMatchEnd(tx, matchId, {
-        maybeCompleteTournament: async (t, tid) => {
-          const finals = await t.tournamentBracketMatch.findMany({
-            where: { tournamentId: tid },
-            orderBy: { round: 'desc' },
-            take: 1
-          })
-          const lastRound = finals[0]?.round
-          if (!lastRound) return
-          const finalRound = await t.tournamentBracketMatch.findMany({
-            where: { tournamentId: tid, round: lastRound }
-          })
-          const allDone = finalRound.every(
-            (f) => f.status === 'completed' || f.status === 'walkover'
-          )
-          if (allDone && finalRound.length > 0) {
-            const tour = await t.tournament.findUnique({ where: { id: tid } })
-            if (tour && tour.status === 'in_progress') {
-              await t.tournament.update({
-                where: { id: tid },
-                data: { status: 'completed' }
-              })
-            }
-          }
-        },
-        advanceWinnerToNextRound: async (t, bid, rid) => {
-          const bm = await t.tournamentBracketMatch.findUnique({
-            where: { id: bid }
-          })
-          if (!bm) return
-          const next = await t.tournamentBracketMatch.findFirst({
-            where: {
-              tournamentId: bm.tournamentId,
-              round: bm.round + 1,
-              slotInRound: Math.floor(bm.slotInRound / 2)
-            }
-          })
-          if (!next) return
-          const side = bm.slotInRound % 2 === 0 ? 'A' : 'B'
-          await t.tournamentBracketMatch.update({
-            where: { id: next.id },
-            data:
-              side === 'A'
-                ? { playerARegistrationId: rid }
-                : { playerBRegistrationId: rid }
-          })
-          const refreshed = await t.tournamentBracketMatch.findUnique({
-            where: { id: next.id }
-          })
-          if (
-            refreshed?.playerARegistrationId &&
-            refreshed?.playerBRegistrationId &&
-            refreshed.status === 'pending'
-          ) {
-            await t.tournamentBracketMatch.update({
-              where: { id: next.id },
-              data: { status: 'ready' }
-            })
-          }
-        }
-      })
+      await resolveAfterMatchEnd(tx, matchId)
     } catch (e) {
       this.logger.warn(`bracket resolve failed: ${(e as Error).message}`)
     }

@@ -434,6 +434,19 @@ enum BracketMatchStatus {
   walkover
 }
 
+// 双败：对阵归属的 bracket 分组（单败全是 winners）
+enum BracketGroup {
+  winners
+  losers
+  grand_final
+}
+
+// 双败：晋级/落败指向下一场的哪一侧
+enum BracketSlot {
+  A
+  B
+}
+
 model Tournament {
   id                    String           @id // t_xxxxxxxx
   venueId               String           @map("venue_id")
@@ -497,6 +510,17 @@ model TournamentBracketMatch {
   round                    Int                 @db.SmallInt
   slotInRound              Int                 @map("slot_in_round") @db.SmallInt
 
+  // 双败：分组 + 显式 next-match 指针（单败只用 winnerTo，loserTo 为空）。
+  // 指针用裸字段不加自引用 FK：删 bracket 走 deleteMany，自引用 cascade 有删除顺序问题。
+  bracketGroup             BracketGroup        @default(winners) @map("bracket_group")
+  winnerToMatchId          String?             @map("winner_to_match_id")
+  winnerToSlot             BracketSlot?        @map("winner_to_slot")
+  loserToMatchId           String?             @map("loser_to_match_id")
+  loserToSlot              BracketSlot?        @map("loser_to_slot")
+  // BYE 注入的 null 与「此侧还没人来」用值无法区分，必须显式标记「此侧已定」
+  slotASettled             Boolean             @default(false) @map("slot_a_settled")
+  slotBSettled             Boolean             @default(false) @map("slot_b_settled")
+
   playerARegistrationId    String?             @map("player_a_registration_id")
   playerA                  TournamentRegistration? @relation("BracketPlayerA", fields: [playerARegistrationId], references: [id])
   playerBRegistrationId    String?             @map("player_b_registration_id")
@@ -513,8 +537,8 @@ model TournamentBracketMatch {
   createdAt                DateTime            @default(now()) @map("created_at")
   updatedAt                DateTime            @updatedAt @map("updated_at")
 
-  @@unique([tournamentId, round, slotInRound])
-  @@index([tournamentId, round])
+  @@unique([tournamentId, bracketGroup, round, slotInRound])
+  @@index([tournamentId, bracketGroup, round])
   @@map("tournament_bracket_matches")
 }
 

@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common'
+import { Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common'
 import {
   ConnectedSocket,
   MessageBody,
@@ -23,14 +23,49 @@ interface ZqWebSocket extends WebSocket {
 }
 
 @WebSocketGateway({ path: '/ws' })
-export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(RealtimeGateway.name)
+  /** 所有在线连接，供 ping 看门狗遍历 */
+  private readonly clients = new Set<ZqWebSocket>()
+  private pingTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeService
   ) {}
+
+  /**
+   * 主动 ping 看门狗:每 25s 一轮——上轮没回 pong 的判定为死连接 terminate 掉,
+   * 否则置 _isAlive=false 再 ping。回收"半死连接",避免一直往死 socket 广播。
+   */
+  onModuleInit() {
+    this.pingTimer = setInterval(() => {
+      for (const client of this.clients) {
+        if (client._isAlive === false) {
+          try {
+            client.terminate()
+          } catch {}
+          this.clients.delete(client)
+          this.realtime.onDisconnect(client)
+          continue
+        }
+        client._isAlive = false
+        try {
+          client.ping()
+        } catch {}
+      }
+    }, 25000)
+  }
+
+  onModuleDestroy() {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer)
+      this.pingTimer = null
+    }
+  }
 
   async handleConnection(client: ZqWebSocket, request: IncomingMessage) {
     try {
@@ -65,6 +100,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       client.on('pong', () => {
         client._isAlive = true
       })
+      this.clients.add(client)
 
       this.send(client, { op: 'hello', data: { identity: client._identity } })
     } catch (e) {
@@ -74,6 +110,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   handleDisconnect(client: ZqWebSocket) {
+    this.clients.delete(client)
     this.realtime.onDisconnect(client)
   }
 
