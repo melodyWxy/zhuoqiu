@@ -33,6 +33,11 @@ export class MatchSocket {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private visibilityHandler: (() => void) | null = null
   private onlineHandler: (() => void) | null = null
+  // 小程序级前台 / 网络监听(weapp 没有 DOM,window/document 监听不生效)
+  private appShowHandler: (() => void) | null = null
+  private networkHandler: ((res: { isConnected: boolean }) => void) | null = null
+  // 看门狗:最近一次收到任何消息(含 heartbeat_ack)的时间;长时间无消息 = 半死连接
+  private lastRecvAt = 0
 
   async connect(): Promise<void> {
     const token = useAuthStore.getState().accessToken
@@ -58,6 +63,7 @@ export class MatchSocket {
       this.hasOpened = true
       this.retryDelay = 1000
       this.retryCount = 0 // 重连成功：退避 + 次数都清零
+      this.lastRecvAt = Date.now()
       // 重连后自动重订阅，带 afterSeq 让 server 补发错过的事件
       for (const [matchId, afterSeq] of this.subscribedMatches) {
         try {
@@ -75,6 +81,7 @@ export class MatchSocket {
     })
 
     this.task.onMessage((res) => {
+      this.lastRecvAt = Date.now() // 任何消息(含 heartbeat_ack)都算"连接还活着"
       try {
         const msg: WsMessage = JSON.parse(
           typeof res.data === 'string' ? res.data : ''
@@ -167,34 +174,63 @@ export class MatchSocket {
    * 比干等下一次退避要友好得多。
    */
   private installNetworkListeners(): void {
-    if (typeof window === 'undefined') return
-    if (this.visibilityHandler || this.onlineHandler) return
-    this.visibilityHandler = () => {
-      if (document.visibilityState === 'visible' && !this.task && !this.gaveUp) {
-        this.kickReconnect()
+    // 跨端:小程序回前台 / 网络恢复 → 立即重连(weapp 没有 DOM,必须用 Taro API)
+    if (!this.appShowHandler) {
+      this.appShowHandler = () => {
+        if (!this.task && !this.gaveUp) this.kickReconnect()
       }
+      try {
+        Taro.onAppShow(this.appShowHandler)
+      } catch {}
     }
-    this.onlineHandler = () => {
-      if (!this.task && !this.gaveUp) this.kickReconnect()
+    if (!this.networkHandler) {
+      this.networkHandler = (res) => {
+        if (res.isConnected && !this.task && !this.gaveUp) this.kickReconnect()
+      }
+      try {
+        Taro.onNetworkStatusChange(this.networkHandler)
+      } catch {}
     }
-    try {
-      document.addEventListener('visibilitychange', this.visibilityHandler)
-      window.addEventListener('online', this.onlineHandler)
-    } catch {
-      /* Taro 非 H5 端没有 document/window */
+    // H5 兜底:标签页可见 / 浏览器 online
+    if (typeof window !== 'undefined' && !this.visibilityHandler && !this.onlineHandler) {
+      this.visibilityHandler = () => {
+        if (document.visibilityState === 'visible' && !this.task && !this.gaveUp) {
+          this.kickReconnect()
+        }
+      }
+      this.onlineHandler = () => {
+        if (!this.task && !this.gaveUp) this.kickReconnect()
+      }
+      try {
+        document.addEventListener('visibilitychange', this.visibilityHandler)
+        window.addEventListener('online', this.onlineHandler)
+      } catch {}
     }
   }
 
   private removeNetworkListeners(): void {
-    if (typeof window === 'undefined') return
-    try {
-      if (this.visibilityHandler) {
-        document.removeEventListener('visibilitychange', this.visibilityHandler)
-      }
-      if (this.onlineHandler) {
-        window.removeEventListener('online', this.onlineHandler)
-      }
-    } catch {}
+    if (this.appShowHandler) {
+      try {
+        Taro.offAppShow(this.appShowHandler)
+      } catch {}
+      this.appShowHandler = null
+    }
+    if (this.networkHandler) {
+      try {
+        Taro.offNetworkStatusChange(this.networkHandler)
+      } catch {}
+      this.networkHandler = null
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        if (this.visibilityHandler) {
+          document.removeEventListener('visibilitychange', this.visibilityHandler)
+        }
+        if (this.onlineHandler) {
+          window.removeEventListener('online', this.onlineHandler)
+        }
+      } catch {}
+    }
     this.visibilityHandler = null
     this.onlineHandler = null
   }
@@ -213,9 +249,41 @@ export class MatchSocket {
 
   private startHeartbeat(): void {
     this.stopHeartbeat()
+    this.lastRecvAt = Date.now()
+    // 15s 一次:压在运营商 NAT 回收窗口内;同时兼作看门狗
     this.heartbeatTimer = setInterval(() => {
+      // 看门狗:超过 40s 没收到任何消息(含 heartbeat_ack)→ 判定半死,强制重连。
+      // 解决 onClose 不触发的"半死连接"(底层断了但没收到 close 帧)。
+      if (this.hasOpened && Date.now() - this.lastRecvAt > 40000) {
+        this.forceReconnect()
+        return
+      }
       this.sendEvent('heartbeat', {})
-    }, 30000)
+    }, 15000)
+  }
+
+  /** 强制断开当前(疑似半死)连接并重连。区别于用户主动 close。 */
+  private forceReconnect(): void {
+    this.stopHeartbeat()
+    try {
+      this.task?.close({})
+    } catch {}
+    this.task = null
+    this.hasOpened = false
+    this.connecting = false
+    this.emit({ op: '__ws_close__', data: { code: -1 /* watchdog */ } })
+    this.kickReconnect()
+  }
+
+  /**
+   * 用户/页面主动触发:清放弃态 + 立即重连。
+   * 供联机页 useDidShow(切回前台/返回该页)调用,确保连上后能拉到最新状态。
+   */
+  kick(): void {
+    this.gaveUp = false
+    if (this.task || this.connecting) return // 已连着就不重复连
+    this.retryCount = 0
+    this.kickReconnect()
   }
 
   private stopHeartbeat(): void {

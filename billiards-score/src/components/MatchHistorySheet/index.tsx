@@ -8,6 +8,8 @@ interface Props {
   matchId: string
   /** slot → 玩家昵称，用于把 payload 里的 slot 翻译为人名 */
   slotNames: Record<number, string>
+  /** 变化即重拉(配合页面 useDidShow:切回前台时面板若开着也同步最新记录) */
+  reloadKey?: number
   onClose: () => void
 }
 
@@ -108,6 +110,7 @@ export default function MatchHistorySheet({
   visible,
   matchId,
   slotNames,
+  reloadKey,
   onClose
 }: Props) {
   const [items, setItems] = useState<EventRow[]>([])
@@ -133,7 +136,7 @@ export default function MatchHistorySheet({
     return () => {
       cancelled = true
     }
-  }, [visible, matchId])
+  }, [visible, matchId, reloadKey])
 
   if (!visible) return null
 

@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { matchApi, MatchDetail } from '../../core/api/match'
 import { getMatchSocket, closeMatchSocket, WsMessage } from '../../core/ws/socket'
+import { useRoomLiveSync } from '../../core/ws/useRoomLiveSync'
 import { useAuthStore } from '../../core/auth/store'
 import MatchHistorySheet from '../../components/MatchHistorySheet'
 import ConnectionBanner from '../../components/ConnectionBanner'
@@ -29,6 +30,7 @@ export default function OnlineNineBall({ matchId }: Props) {
   // 比赛结束弹窗：不再倒计时强跳，由用户选择「查看战报 / 再来一场 / 歇会」
   const [endedOverlay, setEndedOverlay] = useState<null | { done: true }>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyReloadKey, setHistoryReloadKey] = useState(0)
   const lastSeq = useRef(0)
   const currentUserId = useAuthStore((s) => s.user?.id ?? null)
   const selfInitiatedEnd = useRef(false)
@@ -47,6 +49,9 @@ export default function OnlineNineBall({ matchId }: Props) {
       // toast 由 client 层处理
     }
   }, [matchId])
+
+  // 兜底同步:页面再次 show / 低频轮询 / 重连成功 都强制拉最新(+ 重拉历史记录)
+  useRoomLiveSync(refresh, () => setHistoryReloadKey((k) => k + 1))
 
   useEffect(() => {
     refresh()
@@ -78,8 +83,10 @@ export default function OnlineNineBall({ matchId }: Props) {
 
     return () => {
       off()
-      // 离开页面不主动 close socket，保留连接供其他页面
-      getMatchSocket().unsubscribeMatch(matchId)
+      // 离开房间页(出栈卸载)关掉 WS;再进房间时 useEffect 会重新建连并 subscribe。
+      // C 端同一时刻只在一个房间,关掉可避免离开后留下空闲/半死连接。
+      // 注:navigateTo 跳子页只是隐藏房间页、不卸载,不会触发这里。
+      closeMatchSocket()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, refresh])
@@ -401,6 +408,7 @@ export default function OnlineNineBall({ matchId }: Props) {
       <MatchHistorySheet
         visible={historyOpen}
         matchId={matchId}
+        reloadKey={historyReloadKey}
         slotNames={players.reduce(
           (acc, p) => {
             acc[p.slot] = p.displayName
