@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import { WS_BASE_URL } from '../api/config'
 import { useAuthStore } from '../auth/store'
+import { refreshAccessToken } from '../api/client'
 
 export interface WsMessage {
   op: string
@@ -12,8 +13,12 @@ type Listener = (msg: WsMessage) => void
 
 /** 达到这么多次后放弃（退避到 15s 上限后，总耗时约 2 分钟）。避免"永远拨号"。 */
 const MAX_RECONNECT = 8
-/** 认证 / 协议错误关闭码：这些是服务端明确拒绝，不应重连 */
-const AUTH_CLOSE_CODES = new Set([4001, 4003, 1008]) // 自定义 401 / forbidden / policy violation
+/** 硬拒绝关闭码：服务端明确拒绝且重连无意义,直接放弃 */
+const AUTH_CLOSE_CODES = new Set([4003, 1008]) // forbidden / policy violation
+/** token 过期/无效:不是永久拒绝——先刷新 token 再重连一次 */
+const TOKEN_CLOSE_CODE = 4001
+/** 同一次断线最多尝试刷新 token 重连几次,防止服务端持续 4001 时死循环 */
+const MAX_AUTH_REFRESH = 2
 
 /**
  * Taro 跨端 WebSocket 封装：
@@ -29,6 +34,7 @@ export class MatchSocket {
   private gaveUp = false
   private retryDelay = 1000
   private retryCount = 0
+  private authRefreshCount = 0 // 本次断线已尝试刷新 token 重连的次数
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private visibilityHandler: (() => void) | null = null
@@ -63,6 +69,7 @@ export class MatchSocket {
       this.hasOpened = true
       this.retryDelay = 1000
       this.retryCount = 0 // 重连成功：退避 + 次数都清零
+      this.authRefreshCount = 0
       this.lastRecvAt = Date.now()
       // 重连后自动重订阅，带 afterSeq 让 server 补发错过的事件
       for (const [matchId, afterSeq] of this.subscribedMatches) {
@@ -109,7 +116,12 @@ export class MatchSocket {
       if (this.closedByUser) return
       // 告诉 UI 层：房间连接断了，正在尝试重连
       this.emit({ op: '__ws_close__', data: { code: ev?.code } })
-      // 认证 / 协议类拒绝不再重连
+      // token 过期/无效:不是永久拒绝——刷新 token 再重连(WS 没有 HTTP 那套自动刷新)
+      if (ev?.code === TOKEN_CLOSE_CODE) {
+        void this.handleTokenClose()
+        return
+      }
+      // 其它认证 / 协议类拒绝不再重连
       if (ev?.code && AUTH_CLOSE_CODES.has(ev.code)) {
         this.giveUp(`服务端拒绝连接 (code=${ev.code})`)
         return
@@ -146,6 +158,29 @@ export class MatchSocket {
     }, delay)
   }
 
+  /**
+   * 4001(token 过期/无效)专用:刷新 access token 后重连一次。
+   * WS 不像 HTTP 的 callApi 自带刷新,token 过期会一直 4001;这里复用同一套
+   * refreshAccessToken(单飞 + 写回 store),拿到新 token 再连。
+   * 刷新失败(refresh token 也失效=真登出)→ 放弃并提示重新登录。
+   */
+  private async handleTokenClose(): Promise<void> {
+    if (this.closedByUser || this.gaveUp) return
+    if (this.authRefreshCount >= MAX_AUTH_REFRESH) {
+      this.giveUp('登录已过期，请重新登录')
+      return
+    }
+    this.authRefreshCount += 1
+    const token = await refreshAccessToken()
+    if (this.closedByUser || this.gaveUp) return
+    if (!token) {
+      this.giveUp('登录已过期，请重新登录')
+      return
+    }
+    // 有新 token → 立即重连(connect 会从 store 读到刚刷新的 token)
+    this.kickReconnect()
+  }
+
   /** 放弃重连：通知 UI 层弹提示，清空 pending 定时器。 */
   private giveUp(reason: string): void {
     this.gaveUp = true
@@ -161,6 +196,7 @@ export class MatchSocket {
     this.gaveUp = false
     this.retryCount = 0
     this.retryDelay = 1000
+    this.authRefreshCount = 0
   }
 
   private emit(msg: WsMessage): void {
@@ -283,6 +319,7 @@ export class MatchSocket {
     this.gaveUp = false
     if (this.task || this.connecting) return // 已连着就不重复连
     this.retryCount = 0
+    this.authRefreshCount = 0
     this.kickReconnect()
   }
 
