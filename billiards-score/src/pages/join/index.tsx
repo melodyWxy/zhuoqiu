@@ -48,6 +48,21 @@ export default function JoinPage() {
     setSlot('')
     try {
       const m = await matchApi.detail(c, { toast: false })
+      // 已经在房间内(在座选手)→ 直接进房间,不再展示选空位/观众
+      if (cloudUser && m.state !== 'ended') {
+        const mine = m.players.some(
+          (p) => p.isCurrent && p.userId === cloudUser.id
+        )
+        if (mine) {
+          const url =
+            m.type === 'nine_ball'
+              ? '/pages/nine-ball/index'
+              : '/pages/eight-ball/index'
+          useGameTimer.getState().start()
+          Taro.redirectTo({ url: `${url}?matchId=${m.id}&role=player` })
+          return
+        }
+      }
       setPreview({
         type: m.type,
         state: m.state,
