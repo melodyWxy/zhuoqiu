@@ -191,8 +191,10 @@ export default function OnlineNineBall({ matchId }: Props) {
     const fouler = ensureSelected()
     if (fouler === null) return
 
+    // 补偿对象排除犯规者本人(给自己 +1 没有意义)
+    const targets = players.filter((p) => p.slot !== fouler)
     const scoreToRes = await Taro.showActionSheet({
-      itemList: players.map((p) => `给 ${p.displayName} +1 分`)
+      itemList: targets.map((p) => `给 ${p.displayName} +1 分`)
     }).catch(() => null)
     if (!scoreToRes || scoreToRes.tapIndex < 0) return
 
@@ -200,11 +202,11 @@ export default function OnlineNineBall({ matchId }: Props) {
     try {
       await matchApi.event(matchId, 'foul', {
         foulerSlot: fouler,
-        compensateSlot: players[scoreToRes.tapIndex].slot
+        compensateSlot: targets[scoreToRes.tapIndex].slot
       })
       Taro.showToast({ title: '已记录犯规', icon: 'none', duration: 800 })
       // 犯规记完切选中到"被补偿方"，方便紧接着记分
-      setSelectedSlot(players[scoreToRes.tapIndex].slot)
+      setSelectedSlot(targets[scoreToRes.tapIndex].slot)
       refresh()
     } finally {
       setBusy(false)
